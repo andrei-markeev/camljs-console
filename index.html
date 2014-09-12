@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>CamlJs Console</title>
+    <link type="text/css" rel="stylesheet" href="Content/codemirror-3.01/codemirror.css" />
+    <link type="text/css" rel="stylesheet" href="Content/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="Content/main.css" />
+    <script type="text/javascript" src="Scripts/codemirror-3.01/codemirror.js"></script>
+    <script type="text/javascript" src="Scripts/codemirror-3.01/mode/javascript.js"></script>
+    <script type="text/javascript" src="Scripts/codemirror-3.01/mode/xml.js"></script>
+    <script type="text/javascript" src="Scripts/camljs.js"></script>
+    <script type="text/javascript" src="Scripts/camljs.spdeps.js"></script>
+    <script type="text/javascript" src="Scripts/vkbeautify.js"></script>
+</head>
+<body>
+
+    <div class="editor">
+        <textarea id="editor">var query = new CamlBuilder().Where().IntegerField("ID").In([1,4,6,8]).ToString();</textarea>
+    </div>
+
+    <div class="tabs">
+        <span>Caml</span>
+        <span>Data preview <span id="badge" class="badge">0</span></span>
+        <div>
+            <textarea id="caml"></textarea>
+        </div>
+        <div>
+            <div class="list-selection">
+                <select id="select-list">
+                    <option value="">Select list...</option>
+                </select>
+            </div>
+            <div id="loading">Loading...</div>
+            <div id="live-preview">
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="Scripts/app.js"></script>
+
+</body>
+</html>
+

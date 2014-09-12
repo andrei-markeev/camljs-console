@@ -1,0 +1,22 @@
+{
+	"name": "CamlJS Console",
+    "homepage_url": "https://github.com/andrei-markeev/camljs-console",
+	"version": "1.0.0",
+	"description": "CamlJS Console with live preview.",
+	"icons": {
+        "16": "AppIcon.png",
+        "48": "AppIcon.png",
+        "128": "AppIcon.png"
+	},
+    "browser_action": {
+        "default_icon":  "AppIcon.png",
+        "default_popup": "index.html"
+    },
+    "permissions":  [
+        "tabs",
+        "http://*/*",
+        "https://*/*"
+    ],
+    "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+	"manifest_version": 2
+}

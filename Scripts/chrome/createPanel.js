@@ -1,0 +1,1 @@
+﻿chrome.devtools.panels.create("CamlJs", "", "index.html", function () { });
