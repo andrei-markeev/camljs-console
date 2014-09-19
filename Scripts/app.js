@@ -1,4 +1,5 @@
-﻿(function () {
+﻿/// <reference path="typescriptServices.js" />
+(function () {
     var editorCM = CodeMirror.fromTextArea(document.getElementById("editor"), {
         lineNumbers: true,
         matchBrackets: true,
@@ -11,6 +12,48 @@
     });
     camlCM.setSize(null, "100%");
 
+    var tsFactory = new TypeScript.Services.TypeScriptServicesFactory();
+    var tsVersion = 1;
+    var tsHost = {
+        log: function (message) { console.log("tsHost: " + message); },
+        information: function (message) { console.log("tsHost: " + message); },
+        getCompilationSettings: function () { return "{ \"noLib\": true }"; },
+        getScriptFileNames: function () { return "[\"camljs-console.ts\"]" },
+        getScriptSnapshot: function (fn) {
+            var snapshot = TypeScript.ScriptSnapshot.fromString(camljs_d_ts_contents + editorCM.getValue());
+            return {
+                getText: function (s, e) { return snapshot.getText(s, e); },
+                getLength: function () { return snapshot.getLength(); },
+                getLineStartPositions: function () { return "[" + snapshot.getLineStartPositions().toString() + "]" },
+                getTextChangeRangeSinceVersion: function (version) {
+                    return JSON.stringify({
+                        span: { start: camljs_d_ts_length, length: snapshot.getLength() - camljs_d_ts_length },
+                        newLength: snapshot.getLength()
+                    });
+                }
+            };
+        },
+        getScriptVersion: function (fn) { return tsVersion; },
+        scriptChanged: function () { tsVersion++; },
+        getScriptIsOpen: function (fn) { return true; },
+        getLocalizedDiagnosticMessages: function () { return ""; },
+        getCancellationToken: function () { return null; },
+        getScriptByteOrderMark: function () { return ""; },
+    };
+
+    var camljs_d_ts_contents = "";
+    var camljs_d_ts_length = 0;
+    var tsServiceShim = null;
+    var client = new XMLHttpRequest();
+    client.open('GET', 'Scripts/typings/camljs/camljs.d.ts');
+    client.onreadystatechange = function () {
+        if (client.readyState != 4)
+            return;
+        camljs_d_ts_contents = client.responseText;
+        camljs_d_ts_length = camljs_d_ts_contents.length;
+        tsServiceShim = tsFactory.createLanguageServiceShim(tsHost);
+    }
+    client.send();
 
     var loadingData = false;
     setBadge(0);
@@ -70,7 +113,20 @@
         }
     }
 
-    function compileCAML(cm) {
+    function compileCAML(cm, changeObj) {
+        if (changeObj && changeObj.text.length == 1 && changeObj.text[0] == '.')
+        {
+            tsHost.scriptChanged();
+
+            var completions = tsServiceShim.languageService.getCompletionsAtPosition('camljs-console.ts', camljs_d_ts_length + cm.indexFromPos(changeObj.to) + 1, true);
+
+            var list = [];
+            for (var i=0;i<completions.entries.length;i++)
+                list.push(completions.entries[i].name);
+
+            cm.showHint({ completeSingle: false, hint: function (cm) { return { from: cm.getCursor(), to: cm.getCursor(), list: list }; } });
+            return;
+        }
         try {
             eval(cm.getValue());
             camlCM.setValue(vkbeautify.xml(query));

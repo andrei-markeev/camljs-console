@@ -18,22 +18,23 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="AppIcon.png" />
-    <Content Include="Content\codemirror-3.01\codemirror.css" />
+    <Content Include="Content\bootstrap.min.css" />
+    <Content Include="Content\codemirror\codemirror.css" />
+    <Content Include="Content\codemirror\show-hint.css" />
     <Content Include="Content\main.css" />
-    <Content Include="createPanel.html" />
+    <Content Include="Images\camljs-to-caml.png" />
+    <Content Include="Images\live-data-preview.png" />
     <Content Include="index.html" />
     <Content Include="Scripts\app.js" />
-    <Content Include="Scripts\chrome\background.js" />
-    <Content Include="Scripts\chrome\createPanel.js" />
+    <Content Include="Scripts\codemirror\codemirror.js" />
+    <Content Include="Scripts\codemirror\mode\javascript.js" />
+    <Content Include="Scripts\codemirror\mode\xml.js" />
+    <Content Include="Scripts\codemirror\show-hint.js" />
     <Content Include="Scripts\livePreview.js" />
     <Content Include="Scripts\camljs.js" />
     <Content Include="Scripts\camljs.spdeps.js" />
-    <Content Include="Scripts\codemirror-3.01\codemirror.js" />
-    <Content Include="Scripts\codemirror-3.01\mode\css.js" />
-    <Content Include="Scripts\codemirror-3.01\mode\htmlmixed.js" />
-    <Content Include="Scripts\codemirror-3.01\mode\javascript.js" />
-    <Content Include="Scripts\codemirror-3.01\mode\xml.js" />
     <Content Include="manifest.json" />
+    <Content Include="Scripts\typescriptServices.js" />
     <Content Include="Scripts\vkbeautify.js" />
     <Content Include="web.config" />
   </ItemGroup>
