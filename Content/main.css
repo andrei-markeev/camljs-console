@@ -80,3 +80,20 @@
 
 .tabs > div:before { border-top: 2px solid #fff; content: ""; position: absolute; left: 0; top: -2px; width: 69px; }
 .tabs > div:nth-of-type(2):before { left: 73px; width: 140px; }
+
+.tooltip-inner {
+    max-width:400px;
+    color: #555;
+    background-color: #eee;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+.tooltip-arrow {
+    visibility: hidden;
+}
+.tooltip-docComment {
+    color: #555;
+}
+.tooltip-docComment:not(:empty) {
+    border-top: 1px solid #999;
+}

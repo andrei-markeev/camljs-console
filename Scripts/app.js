@@ -25,12 +25,7 @@
                 getText: function (s, e) { return snapshot.getText(s, e); },
                 getLength: function () { return snapshot.getLength(); },
                 getLineStartPositions: function () { return "[" + snapshot.getLineStartPositions().toString() + "]" },
-                getTextChangeRangeSinceVersion: function (version) {
-                    return JSON.stringify({
-                        span: { start: camljs_d_ts_length, length: snapshot.getLength() - camljs_d_ts_length },
-                        newLength: snapshot.getLength()
-                    });
-                }
+                getTextChangeRangeSinceVersion: function (version) { return null; }
             };
         },
         getScriptVersion: function (fn) { return tsVersion; },
@@ -118,13 +113,60 @@
         {
             tsHost.scriptChanged();
 
-            var completions = tsServiceShim.languageService.getCompletionsAtPosition('camljs-console.ts', camljs_d_ts_length + cm.indexFromPos(changeObj.to) + 1, true);
+            var scriptPosition = camljs_d_ts_length + cm.indexFromPos(changeObj.to) + 1;
+            var completions = tsServiceShim.languageService.getCompletionsAtPosition('camljs-console.ts', scriptPosition, true);
 
             var list = [];
-            for (var i=0;i<completions.entries.length;i++)
-                list.push(completions.entries[i].name);
+            for (var i = 0; i < completions.entries.length; i++) {
+                var details = tsServiceShim.languageService.getCompletionEntryDetails('camljs-console.ts', scriptPosition, completions.entries[i].name)
+                list.push({
+                    text: completions.entries[i].name,
+                    displayText: completions.entries[i].name,
+                    typeInfo: details.type,
+                    docComment: details.docComment,
+                    className: "camljs-" + completions.entries[i].kind
+                });
+            }
 
-            cm.showHint({ completeSingle: false, hint: function (cm) { return { from: cm.getCursor(), to: cm.getCursor(), list: list }; } });
+            cm.showHint({
+                completeSingle: false,
+                hint: function (cm) {
+                    var cur = cm.getCursor();
+                    var token = cm.getTokenAt(cur);
+                    var completionInfo = { from: cur, to: cur, list: list };
+                    if (token.string != ".")
+                    {
+                        var show_words = [];
+                        for (var i = 0; i < list.length; i++)
+                        {
+                            if (list[i].text.indexOf(token.string) > -1)
+                                show_words.push(list[i]);
+                        }
+                        completionInfo = {
+                            from: CodeMirror.Pos(cur.line, token.start),
+                            to: CodeMirror.Pos(cur.line, token.end),
+                            list: show_words
+                        };
+                    }
+
+                    var tooltip;
+                    CodeMirror.on(completionInfo, "select", function (completion, element) {
+                        $('.tooltip').remove();
+                        $(element).tooltip({
+                            html: true,
+                            title: '<div class="tooltip-typeInfo">' + completion.typeInfo + '</div>' + '<div class="tooltip-docComment">' + completion.docComment.replace('\n','<br/>') + '</div>',
+                            trigger: 'manual', container: 'body', placement: 'right'
+                        });
+                        $(element).tooltip('show');
+                    });
+                    CodeMirror.on(completionInfo, "close", function () {
+                        $('.tooltip').remove();
+                    });
+
+                    return completionInfo;
+                }
+            });
+
             return;
         }
         try {

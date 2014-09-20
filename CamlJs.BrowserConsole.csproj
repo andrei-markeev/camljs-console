@@ -23,13 +23,19 @@
     <Content Include="Content\codemirror\show-hint.css" />
     <Content Include="Content\main.css" />
     <Content Include="Images\camljs-to-caml.png" />
+    <Content Include="Images\intellisense.png" />
     <Content Include="Images\live-data-preview.png" />
     <Content Include="index.html" />
     <Content Include="Scripts\app.js" />
+    <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\codemirror\codemirror.js" />
     <Content Include="Scripts\codemirror\mode\javascript.js" />
     <Content Include="Scripts\codemirror\mode\xml.js" />
     <Content Include="Scripts\codemirror\show-hint.js" />
+    <Content Include="README.md" />
+    <None Include="Scripts\jquery-2.1.1.intellisense.js" />
+    <Content Include="Scripts\jquery-2.1.1.js" />
+    <Content Include="Scripts\jquery-2.1.1.min.js" />
     <Content Include="Scripts\livePreview.js" />
     <Content Include="Scripts\camljs.js" />
     <Content Include="Scripts\camljs.spdeps.js" />
@@ -44,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
+    <Content Include="Scripts\jquery-2.1.1.min.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
