@@ -1,22 +1,29 @@
 ﻿(function () {
 
     var getLists = function () {
-        var ctx = SP.ClientContext.get_current();
-        var lists = ctx.get_web().get_lists();
-        ctx.load(lists);
-        ctx.executeQueryAsync(function () {
-            var enumerator = lists.getEnumerator();
-            var lists_array = [];
-            while (enumerator.moveNext()) {
-                var list = enumerator.get_current();
-                if (list.get_hidden() == false)
-                    lists_array.push({ title: list.get_title(), id: list.get_id() });
-            }
-            window.postMessage({ id: "CamlJsConsole", type: "lists", lists: lists_array }, "*");
-        },
-        function (sender, args) {
-            window.postMessage({ id: "CamlJsConsole", type: "error", error: args.get_message() }, "*");
-        });
+        try
+        {
+            var ctx = SP.ClientContext.get_current();
+            var lists = ctx.get_web().get_lists();
+            ctx.load(lists);
+            ctx.executeQueryAsync(function () {
+                var enumerator = lists.getEnumerator();
+                var lists_array = [];
+                while (enumerator.moveNext()) {
+                    var list = enumerator.get_current();
+                    if (list.get_hidden() == false)
+                        lists_array.push({ title: list.get_title(), id: list.get_id() });
+                }
+                window.postMessage({ id: "CamlJsConsole", type: "lists", lists: lists_array }, "*");
+            },
+            function (sender, args) {
+                window.postMessage({ id: "CamlJsConsole", type: "error", error: args.get_message() }, "*");
+            });
+        }
+        catch(e)
+        {
+            window.postMessage({ id: "CamlJsConsole", type: "error", error: "Fatal error retrieving lists from portal!<br />Please note: data preview only works with SharePoint 2010 and 2013 and you need to have appropriate permissions.<br />Error message: " + e.message }, "*");
+        }
     }
 
     var getItems = function (listId, queryText) {

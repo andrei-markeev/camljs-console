@@ -67,9 +67,18 @@
         chrome.runtime.onConnect.addListener(function (port) {
             port.onMessage.addListener(function (msg) {
                 if (msg.type == "lists") {
+                    var guidField = "_m_guidString$p$0";
+                    if (msg.lists.length > 0) {
+                        for (var p in msg.lists[0].id) {
+                            if (msg.lists[0].id[p].length == 36) {
+                                guidField = p;
+                                break;
+                            }
+                        }
+                    }
                     for (var i = 0; i < msg.lists.length; i++) {
                         var option = document.createElement("option");
-                        option.value = msg.lists[i].id["_m_guidString$p$0"];
+                        option.value = msg.lists[i].id[guidField];
                         option.innerHTML = msg.lists[i].title;
                         select.appendChild(option);
 
@@ -96,6 +105,7 @@
                 else if (msg.type == "error")
                 {
                     document.getElementById("live-preview").innerHTML = msg.error;
+                    document.getElementById("loading").style.display = 'none';
                 }
             });
         });
