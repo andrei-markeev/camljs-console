@@ -6,6 +6,9 @@
         mode: "text/typescript"
     });
     editorCM.setSize(null, "100%");
+    if (localStorage["editorText"])
+        editorCM.setValue(localStorage["editorText"]);
+
     var camlCM = CodeMirror.fromTextArea(document.getElementById("caml"), {
         readOnly: true,
         mode: "text/xml"
@@ -69,6 +72,11 @@
                         option.value = msg.lists[i].id["_m_guidString$p$0"];
                         option.innerHTML = msg.lists[i].title;
                         select.appendChild(option);
+
+                        if (option.value == localStorage["selectedListId"]) {
+                            option.selected = true;
+                            compileCAML(editorCM);
+                        }
                     }
                     select.style.display = '';
                     if (!loadingData)
@@ -109,6 +117,9 @@
     }
 
     function compileCAML(cm, changeObj) {
+
+        localStorage["editorText"] = cm.getValue();
+
         if (changeObj && changeObj.text.length == 1 && changeObj.text[0] == '.')
         {
             tsHost.scriptChanged();
@@ -175,6 +186,7 @@
 
             var listId = select.options[select.selectedIndex].value;
             if (window.chrome && chrome.tabs && listId != "") {
+                localStorage["selectedListId"] = listId;
                 loadingData = true;
                 document.getElementById("loading").style.display = '';
                 chrome.tabs.executeScript({
