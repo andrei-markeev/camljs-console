@@ -67,43 +67,76 @@
         chrome.runtime.onConnect.addListener(function (port) {
             port.onMessage.addListener(function (msg) {
                 if (msg.type == "lists") {
-                    var guidField = "_m_guidString$p$0";
-                    if (msg.lists.length > 0) {
-                        for (var p in msg.lists[0].id) {
-                            if (msg.lists[0].id[p].length == 36) {
-                                guidField = p;
-                                break;
-                            }
-                        }
-                    }
                     for (var i = 0; i < msg.lists.length; i++) {
                         var option = document.createElement("option");
-                        option.value = msg.lists[i].id[guidField];
+                        option.value = msg.lists[i].id;
                         option.innerHTML = msg.lists[i].title;
                         select.appendChild(option);
 
-                        if (option.value == localStorage["selectedListId"]) {
+                        if (option.value == localStorage["selectedListId"])
                             option.selected = true;
-                            compileCAML(editorCM);
-                        }
                     }
                     select.style.display = '';
                     if (!loadingData)
                         document.getElementById("loading").style.display = 'none';
                 }
+                else if (msg.type == "views") {
+
+                    window.g_viewFieldsForList = {};
+                    for (var i = 0; i < msg.views.length; i++) {
+                        var viewFields = msg.views[i].viewFields;
+
+                        var docIconIndex = viewFields.indexOf("DocIcon");
+                        if (docIconIndex > -1)
+                            viewFields.splice(docIconIndex, 1);
+
+                        for (var j = 0; j < viewFields.length; j++) {
+                            if (viewFields[j] == "LinkTitle" || viewFields[j] == "LinkTitleNoMenu" || viewFields[j] == "LinkDiscussionTitle")
+                                viewFields[j] = "Title";
+                            if (viewFields[j] == "LinkFilename" || viewFields[j] == "LinkFilenameNoMenu")
+                                viewFields[j] = "FileLeafRef";
+                        }
+
+                        window.g_viewFieldsForList[msg.views[i].id] = viewFields;
+                    }
+
+                    if (localStorage["selectedListId"])
+                        compileCAML(editorCM);
+                }
                 else if (msg.type == "items") {
                     setBadge(msg.items.length);
-                    var html = "<span class='total'>Rows returned: " + msg.items.length + "</span><ul class='items-preview'>";
-                    for (var i = 0; i < msg.items.length; i++) {
-                        html += "<li>" + msg.items[i].Title + "</li>";
+                    var haveViewFields = window.g_viewFieldsForList && window.g_viewFieldsForList[localStorage["selectedListId"]];
+                    var html = "<span class='total'>Rows returned: " + msg.items.length + "</span>";
+                    if (haveViewFields) {
+                        var viewFields = window.g_viewFieldsForList[localStorage["selectedListId"]];
+                        html += "<table class='table table-striped'>";
+                        html += "<thead><tr>";
+                        for (var j = 0; j < viewFields.length; j++) {
+                            html += "<th>" + viewFields[j] + "</th>";
+                        }
+                        html += "</tr></thead>";
+                        html += "<tbody>";
+                        for (var i = 0; i < msg.items.length; i++) {
+                            html += "<tr>";
+                            for (var j = 0; j < viewFields.length; j++) {
+                                html += "<td>" + msg.items[i][viewFields[j]] + "</td>";
+                            }
+                            html += "</tr>";
+                        }
+                        html += "</tbody></table>";
                     }
-                    html += "</ul>";
+                    else {
+                        html += "<ul class='items-preview'>";
+                        for (var i = 0; i < msg.items.length; i++) {
+                            html += "<li>" + msg.items[i].Title + "</li>";
+                        }
+                        html += "</ul>";
+                    }
 
                     document.getElementById("live-preview").innerHTML = html;
                     document.getElementById("loading").style.display = 'none';
                 }
-                else if (msg.type == "error")
-                {
+                else if (msg.type == "error") {
                     document.getElementById("live-preview").innerHTML = msg.error;
                     document.getElementById("loading").style.display = 'none';
                 }
@@ -144,6 +177,7 @@
                     text: completions.entries[i].name,
                     displayText: completions.entries[i].name,
                     typeInfo: details.type,
+                    kind: completions.entries[i].kind,
                     docComment: details.docComment,
                     className: "camljs-" + completions.entries[i].kind
                 });
@@ -199,8 +233,23 @@
                 localStorage["selectedListId"] = listId;
                 loadingData = true;
                 document.getElementById("loading").style.display = '';
+                if (query.indexOf('<View>') != 0 && query.indexOf('<View ') != 0) {
+                    var viewFieldsString = "";
+                    if (window.g_viewFieldsForList && window.g_viewFieldsForList[listId])
+                    {
+                        viewFieldsString += "<ViewFields>";
+                        for (var j = 0; j < window.g_viewFieldsForList[listId].length; j++)
+                            viewFieldsString += '<FieldRef Name="' + window.g_viewFieldsForList[listId][j] + '" />';
+                        viewFieldsString += "</ViewFields>";
+                    }
+                    query = "<View>" + viewFieldsString + "<Query>" + query + "</Query></View>";
+                }
+                else
+                {
+                    // TODO: queries with ViewFields should display appropriate columns
+                }
                 chrome.tabs.executeScript({
-                    code: "RequestCamlJsLivePreviewData('" + listId + "', '<View><Query>" + query + "</Query></View>');"
+                    code: "RequestCamlJsLivePreviewData('" + listId + "', '" + query + "');"
                 });
             }
         }
