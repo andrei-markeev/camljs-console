@@ -27,6 +27,10 @@
         if (window.chrome && chrome.tabs)
             initChromeIntegration();
 
+        g_queryViewFields = window.g_queryViewFields || {};
+        g_viewFieldsForList = window.g_viewFieldsForList || {};
+        g_listFieldsByType = window.g_listFieldsByType || {};
+
         compileCAML(editorCM);
 
     }
@@ -126,16 +130,23 @@
             document.getElementById("loading").style.display = '';
             if (query.indexOf('<View>') != 0 && query.indexOf('<View ') != 0) {
                 var viewFieldsString = "";
-                if (window.g_viewFieldsForList && window.g_viewFieldsForList[listId]) {
+                if (window.g_viewFieldsForList[listId]) {
                     viewFieldsString += "<ViewFields>";
                     for (var j = 0; j < window.g_viewFieldsForList[listId].length; j++)
                         viewFieldsString += '<FieldRef Name="' + window.g_viewFieldsForList[listId][j] + '" />';
                     viewFieldsString += "</ViewFields>";
                 }
                 query = "<View>" + viewFieldsString + "<Query>" + query + "</Query></View>";
+                g_queryViewFields[listId] = null;
             }
             else {
-                // TODO: queries with ViewFields should display appropriate columns
+                
+                g_queryViewFields[listId] = [];
+                var viewFields = $(query).find("viewfields fieldref");
+                for (var j = 0; j < viewFields.length; j++)
+                {
+                    g_queryViewFields[listId].push(viewFields[j].attributes["name"].value);
+                }
             }
             chrome.tabs.executeScript({
                 code: "RequestCamlJsLivePreviewData('" + listId + "', '" + query + "');"
@@ -157,7 +168,7 @@
         }
         else if (msg.type == "items") {
             setBadge(msg.items.length);
-            haveViewFields = window.g_viewFieldsForList && window.g_viewFieldsForList[localStorage["selectedListId"]];
+            haveViewFields = window.g_viewFieldsForList[localStorage["selectedListId"]];
 
             document.getElementById("live-preview").innerHTML = generateItemsHtml(msg.items);
             document.getElementById("loading").style.display = 'none';
@@ -191,8 +202,6 @@
     }
 
     function rememberFieldsInfo(fieldsInfo) {
-        window.g_viewFieldsForList = window.g_viewFieldsForList || {};
-        window.g_listFieldsByType = window.g_listFieldsByType || {};
         for (var i = 0; i < fieldsInfo.length; i++) {
             var viewFields = fieldsInfo[i].viewFields;
 
@@ -241,7 +250,9 @@
     function generateItemsHtml(items) {
         var html = "<span class='total'>Rows returned: " + items.length + "</span>";
         if (haveViewFields) {
-            var viewFields = window.g_viewFieldsForList[localStorage["selectedListId"]];
+            var viewFields = window.g_queryViewFields[localStorage["selectedListId"]];
+            if (!viewFields || viewFields.length == 0)
+                viewFields = window.g_viewFieldsForList[localStorage["selectedListId"]];
             html += "<table class='table table-striped'>";
             html += "<thead><tr>";
             for (var j = 0; j < viewFields.length; j++) {
@@ -305,7 +316,7 @@
             if (fieldType == "Url")
                 fieldType = "URL";
             var listId = localStorage["selectedListId"];
-            if (listId && window.g_listFieldsByType && g_listFieldsByType[listId] && g_listFieldsByType[listId][fieldType]) {
+            if (listId && g_listFieldsByType[listId] && g_listFieldsByType[listId][fieldType]) {
                 var availableFields = g_listFieldsByType[listId][fieldType];
                 for (var f_i = 0; f_i < availableFields.length; f_i++) {
                     list.push({

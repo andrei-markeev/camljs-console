@@ -1,12 +1,12 @@
-// Type definitions for camljs
-// Project: http://camljs.codeplex.com
-// Definitions by: Andrey Markeev <http://markeev.com>
-// Definitions: https://github.com/borisyankov/DefinitelyTyped
-
-
+/// <reference path="Scripts/typings/sharepoint/SharePoint.d.ts" />
 declare class CamlBuilder {
     constructor();
+    /** Generate CAML Query, starting from <Where> tag */
     public Where(): CamlBuilder.IFieldExpression;
+    /** Generate <View> tag for SP.CamlQuery
+    @param viewFields If omitted, default view fields are requested; otherwise, only values for the fields with the specified internal names are returned.
+    Specifying view fields is a good practice, as it decreases traffic between server and client. */
+    public View(viewFields?: string[]): CamlBuilder.IView;
     /** Use for:
     1. SPServices CAMLQuery attribute
     2. Creating partial expressions
@@ -15,8 +15,40 @@ declare class CamlBuilder {
     static Expression(): CamlBuilder.IFieldExpression;
 }
 declare module CamlBuilder {
-    interface IView {
+    interface IView extends IJoinable, IFinalizable {
         Query(): IQuery;
+        RowLimit(limit: number, paged?: boolean): IView;
+        Scope(scope: ViewScope): IView;
+    }
+    interface IJoinable {
+        /** Join the list you're querying with another list.
+        Joins are only allowed through a lookup field relation.
+        @param lookupFieldInternalName Internal name of the lookup field, that points to the list you're going to join in.
+        @alias alias for the joined list */
+        InnerJoin(lookupFieldInternalName: string, alias: string): IJoin;
+        /** Join the list you're querying with another list.
+        Joins are only allowed through a lookup field relation.
+        @param lookupFieldInternalName Internal name of the lookup field, that points to the list you're going to join in.
+        @alias alias for the joined list */
+        LeftJoin(lookupFieldInternalName: string, alias: string): IJoin;
+    }
+    interface IJoin extends IJoinable {
+        /** Select projected field for using in the main Query body
+        @param remoteFieldAlias By this alias, the field can be used in the main Query body. */
+        Select(remoteFieldInternalName: string, remoteFieldAlias: string): IProjectableView;
+    }
+    interface IProjectableView extends IView {
+        /** Select projected field for using in the main Query body
+        @param remoteFieldAlias By this alias, the field can be used in the main Query body. */
+        Select(remoteFieldInternalName: string, remoteFieldAlias: string): IProjectableView;
+    }
+    enum ViewScope {
+        /**  */
+        Recursive = 0,
+        /**  */
+        RecursiveAll = 1,
+        /**  */
+        FilesOnly = 2,
     }
     interface IQuery {
         Where(): IFieldExpression;
@@ -24,6 +56,8 @@ declare module CamlBuilder {
     interface IFinalizable {
         /** Get the resulting CAML query as string */
         ToString(): string;
+        /** Get the resulting CAML query as SP.CamlQuery object */
+        ToCamlQuery(): SP.CamlQuery;
     }
     interface ISortable extends IFinalizable {
         /** Adds OrderBy clause to the query
@@ -42,7 +76,7 @@ declare module CamlBuilder {
     interface IGroupable extends ISortable {
         /** Adds GroupBy clause to the query.
         @param collapse If true, only information about the groups is retrieved, otherwise items are also retrieved. */
-        GroupBy(fieldInternalName): IGroupedQuery;
+        GroupBy(fieldInternalName: any): IGroupedQuery;
     }
     interface IExpression extends IGroupable {
         /** Adds And clause to the query. */
@@ -83,12 +117,10 @@ declare module CamlBuilder {
         UserField(internalName: string): IUserFieldExpression;
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is Lookup */
         LookupField(internalName: string): ILookupFieldExpression;
-        /** DEPRECATED. Please use LookupField(...).Id() instead */
-        LookupIdField(internalName: string): INumberFieldExpression;
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is LookupMulti */
         LookupMultiField(internalName: string): ILookupMultiFieldExpression;
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is UserMulti */
-        UserMultiField(internalName: string): ILookupMultiFieldExpression;
+        UserMultiField(internalName: string): IUserMultiFieldExpression;
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is Date */
         DateField(internalName: string): IDateTimeFieldExpression;
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is DateTime */
@@ -250,30 +282,52 @@ declare module CamlBuilder {
         ValueAsBoolean(): IBooleanFieldExpression;
     }
     interface ILookupMultiFieldExpression {
-        /** Checks whether the value of the field is equal to the specified value */
-        EqualTo(value: string): IExpression;
-        /** Checks whether the value of the field is not equal to the specified value */
-        NotEqualTo(value: string): IExpression;
-        /** Checks whether the values of the field includes the specified value */
-        Includes(value): IExpression;
-        /** Checks whether the values of the field not includes the specified value */
-        NotIncludes(value): IExpression;
+        /** Checks a condition against every item in the multi lookup value */
+        IncludesSuchItemThat(): ILookupFieldExpression;
+        /** Checks whether the field values collection is empty */
+        IsNull(): IExpression;
+        /** Checks whether the field values collection is not empty */
+        IsNotNull(): IExpression;
+        /** DEPRECATED: use "IncludesSuchItemThat().ValueAsText().EqualTo(value)" instead. */
+        Includes(value: any): IExpression;
+        /** DEPRECATED: use "IncludesSuchItemThat().ValueAsText().NotEqualTo(value)" instead. */
+        NotIncludes(value: any): IExpression;
+        /** DEPRECATED: "Eq" operation in CAML works exactly the same as "Includes". To avoid confusion, please use Includes. */
+        EqualTo(value: any): IExpression;
+        /** DEPRECATED: "Neq" operation in CAML works exactly the same as "NotIncludes". To avoid confusion, please use NotIncludes. */
+        NotEqualTo(value: any): IExpression;
+    }
+    interface IUserMultiFieldExpression {
+        /** Checks a condition against every item in the multi lookup value */
+        IncludesSuchItemThat(): IUserFieldExpression;
+        /** Checks whether the field values collection is empty */
+        IsNull(): IExpression;
+        /** Checks whether the field values collection is not empty */
+        IsNotNull(): IExpression;
+        /** DEPRECATED: use "IncludesSuchItemThat().ValueAsText().EqualTo(value)" instead. */
+        Includes(value: any): IExpression;
+        /** DEPRECATED: use "IncludesSuchItemThat().ValueAsText().NotEqualTo(value)" instead. */
+        NotIncludes(value: any): IExpression;
+        /** DEPRECATED: "Eq" operation in CAML works exactly the same as "Includes". To avoid confusion, please use Includes. */
+        EqualTo(value: any): IExpression;
+        /** DEPRECATED: "Neq" operation in CAML works exactly the same as "NotIncludes". To avoid confusion, please use NotIncludes. */
+        NotEqualTo(value: any): IExpression;
     }
     enum DateRangesOverlapType {
         /** Returns events for today */
-        Now,
+        Now = 0,
         /** Returns events for one day, specified by CalendarDate in QueryOptions */
-        Day,
+        Day = 1,
         /** Returns events for one week, specified by CalendarDate in QueryOptions */
-        Week,
+        Week = 2,
         /** Returns events for one month, specified by CalendarDate in QueryOptions.
         Caution: usually also returns few days from previous and next months */
-        Month,
+        Month = 3,
         /** Returns events for one year, specified by CalendarDate in QueryOptions */
-        Year,
+        Year = 4,
     }
     class Internal {
-        static createView(): IView;
+        static createView(viewFields?: string[]): IView;
         static createWhere(): IFieldExpression;
         static createExpression(): IFieldExpression;
     }
