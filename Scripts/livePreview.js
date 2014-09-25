@@ -9,51 +9,65 @@
             ctx.executeQueryAsync(function () {
                 var enumerator = lists.getEnumerator();
                 var lists_array = [];
-                var views = [];
+                var fields_info = [];
                 while (enumerator.moveNext()) {
                     var list = enumerator.get_current();
                     if (list.get_hidden() == false) {
-                        if (list.get_defaultView) {
+                        var list_fields = list.get_fields();
+                        ctx.load(list_fields, "Include(InternalName,TypeAsString)");
+                        if (list.get_defaultView)
+                        {
                             var defaultView = list.get_defaultView();
                             ctx.load(defaultView, 'ViewFields');
-                            views.push({ id: list.get_id().toString(), view: defaultView });
+                            fields_info.push({ id: list.get_id().toString(), fields: list_fields, view: defaultView });
                         }
                         else // SP2010
                         {
-                            var all_views = list.get_views();
-                            ctx.load(all_views, 'Include(DefaultView, ViewFields)');
-                            views.push({ id: list.get_id().toString(), all_views: all_views });
+                            var list_views = list.get_views();
+                            ctx.load(list_views, 'Include(DefaultView, ViewFields)');
+                            fields_info.push({ id: list.get_id().toString(), fields: list_fields, all_views: list_views });
                         }
+
                         lists_array.push({ title: list.get_title(), id: list.get_id().toString() });
                     }
                 }
                 window.postMessage({ id: "CamlJsConsole", type: "lists", lists: lists_array }, "*");
                 ctx.executeQueryAsync(function () {
-                    var views_array = [];
-                    for (var i = 0; i < views.length; i++) {
-                        if (views[i].all_views)
+                    var fields_info_array = [];
+                    for (var i = 0; i < fields_info.length; i++) {
+                        if (fields_info[i].all_views)
                         {
-                            var viewsEnumerator = views[i].all_views.getEnumerator();
+                            var viewsEnumerator = fields_info[i].all_views.getEnumerator();
                             while (viewsEnumerator.moveNext())
                             {
                                 var v = viewsEnumerator.get_current();
                                 if (v.get_defaultView())
                                 {
-                                    views[i].view = v;
+                                    fields_info[i].view = v;
                                     break;
                                 }
                             }
                         }
-                        if (views[i].view) {
-                            var fieldsEnumerator = views[i].view.get_viewFields().getEnumerator();
-                            var fields_array = [];
-                            while (fieldsEnumerator.moveNext()) {
-                                fields_array.push(fieldsEnumerator.get_current());
+                        if (fields_info[i].view) {
+                            var viewFieldsEnumerator = fields_info[i].view.get_viewFields().getEnumerator();
+                            var viewFields_array = [];
+                            while (viewFieldsEnumerator.moveNext()) {
+                                viewFields_array.push(viewFieldsEnumerator.get_current());
                             }
-                            views_array.push({ id: views[i].id, viewFields: fields_array });
+
+                            var listFieldsEnumerator = fields_info[i].fields.getEnumerator();
+                            var listFieldsByType_dict = {};
+                            while (listFieldsEnumerator.moveNext()) {
+                                var listField = listFieldsEnumerator.get_current();
+                                
+                                listFieldsByType_dict[listField.get_typeAsString()] = listFieldsByType_dict[listField.get_typeAsString()] || [];
+                                listFieldsByType_dict[listField.get_typeAsString()].push(listField.get_internalName());
+                            }
+
+                            fields_info_array.push({ id: fields_info[i].id, viewFields: viewFields_array, listFieldsByType: listFieldsByType_dict });
                         }
                     }
-                    window.postMessage({ id: "CamlJsConsole", type: "views", views: views_array }, "*");
+                    window.postMessage({ id: "CamlJsConsole", type: "fieldsInfo", fieldsInfo: fields_info_array }, "*");
                 }, jsomErrorHandler)
             }, jsomErrorHandler);
         }
@@ -106,7 +120,7 @@
             else {
 
                 if (value && value.get_lookupId)
-                    return '<div class="term" title="Lookup Id:' + value.get_lookupId() + '">' + value.get_lookupValue() + '</div>';
+                    return '<div class="term" title="Lookup Id: ' + value.get_lookupId() + '">' + value.get_lookupValue() + '</div>';
                 else if (value && value.TermGuid)
                     return '<div class="term">' + value.Label + '</div>';
                 else if (value == null)
@@ -117,6 +131,8 @@
                     return value;
                 else if (value instanceof SP.Guid)
                     return value.toString();
+                else if (value.get_url)
+                    return '<a href="' + value.get_url() + '" title="' + value.get_url() + '">' + value.get_description() + '</a>';
                 else
                     debugger;
             }

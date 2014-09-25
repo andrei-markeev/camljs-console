@@ -80,11 +80,12 @@
                     if (!loadingData)
                         document.getElementById("loading").style.display = 'none';
                 }
-                else if (msg.type == "views") {
+                else if (msg.type == "fieldsInfo") {
 
-                    window.g_viewFieldsForList = {};
-                    for (var i = 0; i < msg.views.length; i++) {
-                        var viewFields = msg.views[i].viewFields;
+                    window.g_viewFieldsForList = window.g_viewFieldsForList || {};
+                    window.g_listFieldsByType = window.g_listFieldsByType || {};
+                    for (var i = 0; i < msg.fieldsInfo.length; i++) {
+                        var viewFields = msg.fieldsInfo[i].viewFields;
 
                         var docIconIndex = viewFields.indexOf("DocIcon");
                         if (docIconIndex > -1)
@@ -97,7 +98,8 @@
                                 viewFields[j] = "FileLeafRef";
                         }
 
-                        window.g_viewFieldsForList[msg.views[i].id] = viewFields;
+                        window.g_viewFieldsForList[msg.fieldsInfo[i].id] = viewFields;
+                        window.g_listFieldsByType[msg.fieldsInfo[i].id] = msg.fieldsInfo[i].listFieldsByType;
                     }
 
                     if (localStorage["selectedListId"])
@@ -179,8 +181,27 @@
                     typeInfo: details.type,
                     kind: completions.entries[i].kind,
                     docComment: details.docComment,
-                    className: "camljs-" + completions.entries[i].kind
+                    className: "autocomplete-" + completions.entries[i].kind,
+                    livePreview: false
                 });
+                var fieldType = completions.entries[i].name.replace('Field', '');
+                var listId = localStorage["selectedListId"];
+                if (listId && g_listFieldsByType[listId] && g_listFieldsByType[listId][fieldType])
+                {
+                    var availableFields = g_listFieldsByType[listId][fieldType];
+                    for (var f_i = 0; f_i < availableFields.length; f_i++)
+                    {
+                        list.push({
+                            text: completions.entries[i].name + '("' + availableFields[f_i] + '")',
+                            displayText: completions.entries[i].name + '("' + availableFields[f_i] + '")',
+                            typeInfo: details.type,
+                            kind: completions.entries[i].kind,
+                            docComment: "Test a condition against the '" + availableFields[f_i] + "' field.",
+                            className: "autocomplete-livePreview",
+                            livePreview: true
+                        });
+                    }
+                }
             }
 
             cm.showHint({
@@ -188,10 +209,19 @@
                 hint: function (cm) {
                     var cur = cm.getCursor();
                     var token = cm.getTokenAt(cur);
-                    var completionInfo = { from: cur, to: cur, list: list };
-                    if (token.string != ".")
+                    var completionInfo = null;
+                    var show_words = [];
+                    if (token.string == ".")
                     {
-                        var show_words = [];
+                        for (var i = 0; i < list.length; i++) {
+                            if (list[i].livePreview == false)
+                                show_words.push(list[i]);
+                        }
+
+                        completionInfo = { from: cur, to: cur, list: show_words };
+                    }
+                    else
+                    {
                         for (var i = 0; i < list.length; i++)
                         {
                             if (list[i].text.indexOf(token.string) > -1)
