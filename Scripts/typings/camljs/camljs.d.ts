@@ -1,4 +1,4 @@
-/// <reference path="Scripts/typings/sharepoint/SharePoint.d.ts" />
+/// <reference path="../sharepoint/SharePoint.d.ts" />
 declare class CamlBuilder {
     constructor();
     /** Generate CAML Query, starting from <Where> tag */

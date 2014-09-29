@@ -26,6 +26,8 @@
     <Content Include="Images\intellisense.png" />
     <Content Include="Images\live-data-preview.png" />
     <Content Include="index.html" />
+    <TypeScriptCompile Include="Scripts\ChromeIntegration.ts" />
+    <TypeScriptCompile Include="Scripts\Console.ts" />
     <Content Include="Scripts\app.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\codemirror\codemirror.js" />
@@ -43,9 +45,18 @@
     <Content Include="Scripts\typescriptServices.js" />
     <Content Include="Scripts\vkbeautify.js" />
     <Content Include="web.config" />
+    <TypeScriptCompile Include="Scripts\TypeScriptService.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\chrome\chrome-app.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\chrome\chrome.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\typescript-services\typescriptServices.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\webrtc\MediaStream.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\webrtc\RTCPeerConnection.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="Scripts\typings\camljs\camljs.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\codemirror\codemirror.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\sharepoint\SharePoint.d.ts" />
   </ItemGroup>
   <ItemGroup>
@@ -87,12 +98,14 @@
     </VisualStudio>
   </ProjectExtensions>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <TypeScriptOutFile>$(ProjectDir)Scripts\camljs-console.js</TypeScriptOutFile>
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
     <TypeScriptSourceMap>true</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <TypeScriptOutFile>$(ProjectDir)Scripts\camljs-console.js</TypeScriptOutFile>
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
     <TypeScriptSourceMap>false</TypeScriptSourceMap>
