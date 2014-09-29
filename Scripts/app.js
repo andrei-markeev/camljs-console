@@ -290,6 +290,67 @@
         }
     }
 
+    function showCodeMirrorHint(cm, list) {
+        list.sort(function (l, r) {
+            if (l.displayText > r.displayText) return 1;
+            if (l.displayText < r.displayText) return -1;
+            return 0;
+        });
+
+        cm.showHint({
+            completeSingle: false,
+            hint: function (cm) {
+                var cur = cm.getCursor();
+                var token = cm.getTokenAt(cur);
+                var completionInfo = null;
+                var show_words = [];
+                if (token.string == ".") {
+                    for (var i = 0; i < list.length; i++) {
+                        if (list[i].livePreview == false)
+                            show_words.push(list[i]);
+                    }
+
+                    completionInfo = { from: cur, to: cur, list: show_words };
+                }
+                else if (token.string == "," || token.string == "(") {
+
+                    completionInfo = { from: cur, to: cur, list: list };
+
+                }
+                else {
+                    for (var i = 0; i < list.length; i++) {
+                        if (list[i].text.toLowerCase().indexOf(token.string.toLowerCase()) > -1)
+                            show_words.push(list[i]);
+                    }
+
+                    completionInfo = {
+                        from: CodeMirror.Pos(cur.line, token.start),
+                        to: CodeMirror.Pos(cur.line, token.end),
+                        list: show_words
+                    };
+                }
+
+                var tooltip;
+                CodeMirror.on(completionInfo, "select", function (completion, element) {
+                    $('.tooltip').remove();
+                    if (completion.typeInfo) {
+                        $(element).tooltip({
+                            html: true,
+                            title: '<div class="tooltip-typeInfo">' + completion.typeInfo + '</div>' + '<div class="tooltip-docComment">' + completion.docComment.replace('\n', '<br/>') + '</div>',
+                            trigger: 'manual', container: 'body', placement: 'right'
+                        });
+                        $(element).tooltip('show');
+                    }
+                });
+                CodeMirror.on(completionInfo, "close", function () {
+                    $('.tooltip').remove();
+                });
+
+                return completionInfo;
+            }
+        });
+    }
+
     function showAutoCompleteDropDown(cm, changePosition)
     {
         var scriptPosition = tsHost.getLibLength() + cm.indexFromPos(changePosition) + 1;
@@ -332,56 +393,7 @@
             }
         }
 
-        list.sort(function (l, r) {
-            if (l.displayText > r.displayText) return 1;
-            if (l.displayText < r.displayText) return -1;
-            return 0;
-        });
-
-        cm.showHint({
-            completeSingle: false,
-            hint: function (cm) {
-                var cur = cm.getCursor();
-                var token = cm.getTokenAt(cur);
-                var completionInfo = null;
-                var show_words = [];
-                if (token.string == ".") {
-                    for (var i = 0; i < list.length; i++) {
-                        if (list[i].livePreview == false)
-                            show_words.push(list[i]);
-                    }
-
-                    completionInfo = { from: cur, to: cur, list: show_words };
-                }
-                else {
-                    for (var i = 0; i < list.length; i++) {
-                        if (list[i].text.toLowerCase().indexOf(token.string.toLowerCase()) > -1)
-                            show_words.push(list[i]);
-                    }
-                    completionInfo = {
-                        from: CodeMirror.Pos(cur.line, token.start),
-                        to: CodeMirror.Pos(cur.line, token.end),
-                        list: show_words
-                    };
-                }
-
-                var tooltip;
-                CodeMirror.on(completionInfo, "select", function (completion, element) {
-                    $('.tooltip').remove();
-                    $(element).tooltip({
-                        html: true,
-                        title: '<div class="tooltip-typeInfo">' + completion.typeInfo + '</div>' + '<div class="tooltip-docComment">' + completion.docComment.replace('\n', '<br/>') + '</div>',
-                        trigger: 'manual', container: 'body', placement: 'right'
-                    });
-                    $(element).tooltip('show');
-                });
-                CodeMirror.on(completionInfo, "close", function () {
-                    $('.tooltip').remove();
-                });
-
-                return completionInfo;
-            }
-        });
+        showCodeMirrorHint(cm, list);
 
     }
 
@@ -393,6 +405,29 @@
         var signature = tsServiceShim.languageService.getSignatureAtPosition("camljs-console.ts", scriptPosition);
 
         if (signature) {
+
+            if (signature.actual.currentParameter != -1
+                && !signature.actual.currentParameterIsTypeParameter
+                && signature.formal[signature.activeFormal].parameters[signature.actual.currentParameter].name == "viewFields")
+            {
+                var listId = localStorage["selectedListId"];
+                var list = [];
+                for (var t in g_listFieldsByType[listId])
+                {
+                    for (var i = 0; i < g_listFieldsByType[listId][t].length; i++)
+                    {
+                        list.push({
+                            text: "\"" + g_listFieldsByType[listId][t][i] + "\"",
+                            displayText: g_listFieldsByType[listId][t][i],
+                            className: "autocomplete-livePreview",
+                            livePreview: true
+                        });
+                    }
+                }
+                showCodeMirrorHint(cm, list);
+                return;
+            }
+
             tooltipLastPos = changePosition;
             var cursorCoords = cm.cursorCoords();
             var domElement = cm.getWrapperElement();
@@ -423,7 +458,6 @@
         {
             tsHost.scriptChanged();
             showFunctionTooltip(cm, changeObj.to);
-            return;
         }
         else if (changeObj && changeObj.text.length == 1 && changeObj.text[0] == ')')
         {
