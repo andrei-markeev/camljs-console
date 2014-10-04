@@ -23,6 +23,7 @@
     <Content Include="Content\codemirror\show-hint.css" />
     <Content Include="Content\main.css" />
     <Content Include="Images\camljs-to-caml.png" />
+    <Content Include="Images\confirm-add-extension.png" />
     <Content Include="Images\intellisense.png" />
     <Content Include="Images\live-data-preview.png" />
     <Content Include="index.html" />
@@ -30,6 +31,7 @@
     <TypeScriptCompile Include="Scripts\Console.ts" />
     <Content Include="Scripts\app.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\camljs-console.js" />
     <Content Include="Scripts\codemirror\codemirror.js" />
     <Content Include="Scripts\codemirror\mode\javascript.js" />
     <Content Include="Scripts\codemirror\mode\xml.js" />

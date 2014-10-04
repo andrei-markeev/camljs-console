@@ -5,8 +5,8 @@ var vkbeautify: any;
 
 module CamlJs {
     export class Console {
-        private editorCM;
-        private camlCM;
+        private editorCM: CodeMirror.Editor;
+        private camlCM: CodeMirror.Editor;
         private typeScriptService: CamlJs.TypeScriptService;
         private loadingData = false;
         private haveViewFields = false;
@@ -25,7 +25,7 @@ module CamlJs {
 
         private initialize() {
             Console.instance.typeScriptService = new CamlJs.TypeScriptService();
-            Console.instance.initCamlJsEditor();
+            Console.instance.editorCM = Console.instance.initCamlJsEditor();
             Console.instance.initCamlXmlViewer();
             Console.instance.initListSelect();
 
@@ -35,27 +35,28 @@ module CamlJs {
 
             CamlJs.ChromeIntegration.init(Console.instance.livePreviewMessageListener);
 
-            Console.instance.compileCAML(Console.instance.editorCM);
+            Console.instance.compileCAML(Console.instance.editorCM.getDoc());
         }
 
         private initCamlJsEditor() {
 
-            Console.instance.editorCM = CodeMirror.fromTextArea(<HTMLTextAreaElement>document.getElementById("editor"), {
+            var editor = CodeMirror.fromTextArea(<HTMLTextAreaElement>document.getElementById("editor"), {
                 lineNumbers: true,
                 matchBrackets: true,
                 mode: "text/typescript"
             });
-            Console.instance.editorCM.setSize(null, "100%");
+            editor.setSize(null, "100%");
             if (localStorage["editorText"])
-                Console.instance.editorCM.setValue(localStorage["editorText"]);
+                editor.getDoc().setValue(localStorage["editorText"]);
 
-            Console.instance.editorCM.on("cursorActivity", function (cm) {
-                if (cm.getCursor().line != Console.instance.tooltipLastPos.line || cm.getCursor().ch < Console.instance.tooltipLastPos.ch) {
+            editor.on("cursorActivity", function (cm) {
+                if (cm.getDoc().getCursor().line != Console.instance.tooltipLastPos.line || cm.getDoc().getCursor().ch < Console.instance.tooltipLastPos.ch) {
                     $('.tooltip').remove();
                 }
             });
 
-            Console.instance.editorCM.on("change", Console.instance.compileCAML);
+            editor.on("change", function (editor, changeList) { Console.instance.compileCAML(editor.getDoc(), changeList) });
+            return editor;
         }
 
         private initCamlXmlViewer() {
@@ -73,7 +74,7 @@ module CamlJs {
             var select = document.getElementById("select-list");
             select.style.display = 'none';
             select.onchange = function () {
-                Console.instance.compileCAML(Console.instance.editorCM);
+                Console.instance.compileCAML(Console.instance.editorCM.getDoc());
             };
         }
 
@@ -123,7 +124,7 @@ module CamlJs {
                 Console.instance.rememberFieldsInfo(msg.fieldsInfo);
 
                 if (localStorage["selectedListId"])
-                    Console.instance.compileCAML(Console.instance.editorCM);
+                    Console.instance.compileCAML(Console.instance.editorCM.getDoc());
             }
             else if (msg.type == "items") {
                 Console.instance.setBadge(msg.items.length);
@@ -135,6 +136,7 @@ module CamlJs {
             else if (msg.type == "error") {
                 document.getElementById("live-preview").innerHTML = msg.error;
                 document.getElementById("loading").style.display = 'none';
+                Console.instance.setBadge(0);
             }
         }
 
@@ -248,14 +250,14 @@ module CamlJs {
             }
         }
 
-        private showCodeMirrorHint(cm, list) {
+        private showCodeMirrorHint(cm: CodeMirror.Doc, list) {
             list.sort(function (l, r) {
                 if (l.displayText > r.displayText) return 1;
                 if (l.displayText < r.displayText) return -1;
                 return 0;
             });
 
-            cm.showHint({
+            cm.getEditor()["showHint"]({
                 completeSingle: false,
                 hint: function (cm) {
                     var cur = cm.getCursor();
@@ -309,7 +311,7 @@ module CamlJs {
             });
         }
 
-        private showAutoCompleteDropDown(cm, changePosition) {
+        private showAutoCompleteDropDown(cm: CodeMirror.Doc, changePosition) {
             var scriptPosition = cm.indexFromPos(changePosition) + 1;
             var completions = Console.instance.typeScriptService.getCompletions(scriptPosition);
 
@@ -354,7 +356,7 @@ module CamlJs {
 
         }
 
-        private showFunctionTooltip(cm, changePosition) {
+        private showFunctionTooltip(cm: CodeMirror.Doc, changePosition) {
 
             $('.tooltip').remove();
 
@@ -384,8 +386,8 @@ module CamlJs {
                 }
 
                 Console.instance.tooltipLastPos = changePosition;
-                var cursorCoords = cm.cursorCoords();
-                var domElement = cm.getWrapperElement();
+                var cursorCoords = cm.getEditor().cursorCoords(cm.getCursor(), "page");
+                var domElement = cm.getEditor().getWrapperElement();
 
                 $(domElement).data('bs.tooltip', false).tooltip({
                     html: true,
@@ -399,34 +401,53 @@ module CamlJs {
             }
         }
 
-        private compileCAML(cm, changeObj?) {
+        private compileCAML(cm: CodeMirror.Doc, changeObj?: CodeMirror.EditorChangeLinkedList) {
 
             localStorage["editorText"] = cm.getValue();
 
+            if (changeObj)
+                Console.instance.typeScriptService.scriptChanged(cm.getValue(), cm.indexFromPos(changeObj.from), cm.indexFromPos(changeObj.to) - cm.indexFromPos(changeObj.from));
+
             if (changeObj && changeObj.text.length == 1 && (changeObj.text[0] == '.' || changeObj.text[0] == ' ')) {
-                Console.instance.typeScriptService.scriptChanged(cm.getValue());
                 Console.instance.showAutoCompleteDropDown(cm, changeObj.to);
                 return;
             }
             else if (changeObj && changeObj.text.length == 1 && (changeObj.text[0] == '(' || changeObj.text[0] == ',')) {
-                Console.instance.typeScriptService.scriptChanged(cm.getValue());
                 Console.instance.showFunctionTooltip(cm, changeObj.to);
             }
             else if (changeObj && changeObj.text.length == 1 && changeObj.text[0] == ')') {
                 $('.tooltip').remove();
             }
 
+            var allMarkers = cm.getAllMarks();
+            for (var i = 0; i < allMarkers.length; i++)
+            {
+                allMarkers[i].clear();
+            }
+            if (changeObj) {
+                var errors = Console.instance.typeScriptService.getErrors();
+                for (var i = 0; i < errors.length; i++) {
+                    cm.markText(cm.posFromIndex(errors[i].start()), cm.posFromIndex(errors[i].start() + errors[i].length()), {
+                        className: "syntax-error",
+                        title: errors[i].text()
+                    });
+
+                }
+            }
+
+            var query: string = "";
             try {
-                var query: string = "";
                 eval(cm.getValue());
-                Console.instance.camlCM.setValue(vkbeautify.xml(query));
-                Console.instance.updateLivePreview(query);
             }
             catch (err) {
                 console.log("evaluation error");
-                Console.instance.camlCM.setValue("");
+                Console.instance.camlCM.getDoc().setValue("");
                 document.getElementById("live-preview").innerHTML = '';
                 Console.instance.loadingData = false;
+            }
+            if (query != "") {
+                Console.instance.camlCM.getDoc().setValue(vkbeautify.xml(query));
+                Console.instance.updateLivePreview(query);
             }
         }
 

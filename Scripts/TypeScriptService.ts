@@ -1,10 +1,11 @@
 ﻿module CamlJs {
 
     class TypeScriptServiceHost implements TypeScript.Services.ILanguageServiceShimHost {
-        private tsVersion: number = 0;
+        private scriptVersion: number = 0;
         private libText: string = "";
         private libTextLength: number = 0;
         private text: string = "";
+        private changes: TypeScript.TextChangeRange[] = [];
 
         constructor(libText: string) {
             this.libText = libText;
@@ -18,13 +19,12 @@
         error() { return true; }
         fatal() { return true; }
         getCompilationSettings() { return "{ \"noLib\": true }"; }
-        getScriptFileNames() { return "[\"camljs-console.ts\"]" }
-        getScriptVersion(fn) { return this.tsVersion; }
+        getScriptFileNames() { return "[\"camljs-console.ts\", \"camljs.ts\"]" }
+        getScriptVersion(fn) { if (fn == 'camljs.ts') return 0; else return this.scriptVersion; }
         getScriptIsOpen(fn) { return true; }
         getLocalizedDiagnosticMessages() { return ""; }
         getCancellationToken() { return null; }
         getScriptByteOrderMark(fn) { return 0; }
-        getLibLength() { return this.libTextLength; }
 
         resolveRelativePath() { return null; }
         fileExists(fn) { return null; }
@@ -33,17 +33,37 @@
         getDiagnosticsObject() { return null; }
 
         getScriptSnapshot(fn) {
-            var snapshot = TypeScript.ScriptSnapshot.fromString(this.libText + this.text);
+            var snapshot, snapshotChanges, snapshotVersion;
+            if (fn == 'camljs.ts')
+            {
+                snapshot = TypeScript.ScriptSnapshot.fromString(this.libText);
+                snapshotChanges = [];
+                snapshotVersion = 0;
+            }
+            else {
+                snapshot = TypeScript.ScriptSnapshot.fromString(this.text);
+                snapshotChanges = this.changes;
+                snapshotVersion = this.scriptVersion;
+            }
             return {
                 getText: function (s, e) { return snapshot.getText(s, e); },
                 getLength: function () { return snapshot.getLength(); },
                 getLineStartPositions: function () { return "[" + snapshot.getLineStartPositions().toString() + "]" },
-                getTextChangeRangeSinceVersion: function (version) { return null; }
+                getTextChangeRangeSinceVersion: function (version) {
+                    if (snapshotVersion == 0)
+                        return null;
+                    var result = TypeScript.TextChangeRange.collapseChangesAcrossMultipleVersions(snapshotChanges.slice(version - snapshotVersion));
+                    return "{ \"span\": { \"start\": " + result.span().start() + ", \"length\": " + result.span().length() + " }, \"newLength\": " + result.newLength() + " }";
+                }
             };
         }
 
-
-        public scriptChanged(newText) { this.tsVersion++; this.text = newText; }
+        public getLibLength() { return this.libTextLength; }
+        public scriptChanged(newText, startPos, changeLength) {
+            this.scriptVersion++;
+            this.text = newText;
+            this.changes.push(new TypeScript.TextChangeRange(new TypeScript.TextSpan(startPos, changeLength), newText.length));
+        }
     }
 
     export class TypeScriptService {
@@ -66,20 +86,26 @@
             client.send();
         }
 
-        public scriptChanged(newText) {
-            this.tsHost.scriptChanged(newText);
+        public scriptChanged(newText, startPos, changeLength) {
+            this.tsHost.scriptChanged(newText, startPos, changeLength);
         }
 
         public getCompletions(position) {
-            return this.tsServiceShim.languageService.getCompletionsAtPosition('camljs-console.ts', position + this.tsHost.getLibLength(), true);
+            return this.tsServiceShim.languageService.getCompletionsAtPosition('camljs-console.ts', position, true);
         }
 
         public getCompletionDetails(position, name) {
-            return this.tsServiceShim.languageService.getCompletionEntryDetails('camljs-console.ts', position + this.tsHost.getLibLength(), name);
+            return this.tsServiceShim.languageService.getCompletionEntryDetails('camljs-console.ts', position, name);
         }
 
         public getSignature(position) {
-            return this.tsServiceShim.languageService.getSignatureAtPosition('camljs-console.ts', position + this.tsHost.getLibLength());
+            return this.tsServiceShim.languageService.getSignatureAtPosition('camljs-console.ts', position);
+        }
+
+        public getErrors(): TypeScript.Diagnostic[]{
+            var syntastic = this.tsServiceShim.languageService.getSyntacticDiagnostics('camljs-console.ts');
+            var semantic = this.tsServiceShim.languageService.getSemanticDiagnostics('camljs-console.ts');
+            return syntastic.concat(semantic);
         }
     }
 
