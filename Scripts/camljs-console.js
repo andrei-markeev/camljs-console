@@ -1,5 +1,4 @@
-﻿/// <reference path="typings/chrome/chrome.d.ts" />
-var CamlJs;
+﻿var CamlJs;
 (function (CamlJs) {
     var ChromeIntegration = (function () {
         function ChromeIntegration() {
@@ -30,8 +29,6 @@ var CamlJs;
     })();
     CamlJs.ChromeIntegration = ChromeIntegration;
 })(CamlJs || (CamlJs = {}));
-/// <reference path="typings/jquery/jquery.d.ts" />
-/// <reference path="typings/bootstrap/bootstrap.d.ts" />
 var vkbeautify;
 
 var CamlJs;
@@ -100,15 +97,18 @@ var CamlJs;
             var select = document.getElementById("select-list");
             select.style.display = 'none';
             select.onchange = function () {
+                var select = document.getElementById("select-list");
+                var listId = select.options[select.selectedIndex].value;
+                if (listId != "")
+                    localStorage["selectedListId"] = listId;
+
                 Console.instance.compileCAML(Console.instance.editorCM.getDoc());
             };
         };
 
         Console.prototype.updateLivePreview = function (query) {
-            var select = document.getElementById("select-list");
-            var listId = select.options[select.selectedIndex].value;
+            var listId = localStorage["selectedListId"];
             if (listId != "") {
-                localStorage["selectedListId"] = listId;
                 Console.instance.loadingData = true;
                 document.getElementById("loading").style.display = '';
                 if (query.indexOf('<View>') != 0 && query.indexOf('<View ') != 0) {
@@ -441,8 +441,9 @@ var CamlJs;
                 Console.instance.camlCM.getDoc().setValue("");
                 document.getElementById("live-preview").innerHTML = '';
                 Console.instance.loadingData = false;
+                query = "";
             }
-            if (query != "") {
+            if (typeof query == "string" && query != "") {
                 Console.instance.camlCM.getDoc().setValue(vkbeautify.xml(query));
                 Console.instance.updateLivePreview(query);
             }
@@ -603,4 +604,3 @@ var CamlJs;
     })();
     CamlJs.TypeScriptService = TypeScriptService;
 })(CamlJs || (CamlJs = {}));
-//# sourceMappingURL=camljs-console.js.map

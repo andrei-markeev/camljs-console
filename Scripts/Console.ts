@@ -74,6 +74,11 @@ module CamlJs {
             var select = document.getElementById("select-list");
             select.style.display = 'none';
             select.onchange = function () {
+                var select = <HTMLSelectElement>document.getElementById("select-list");
+                var listId: string = select.options[select.selectedIndex].value;
+                if (listId != "")
+                    localStorage["selectedListId"] = listId;
+
                 Console.instance.compileCAML(Console.instance.editorCM.getDoc());
             };
         }
@@ -81,11 +86,8 @@ module CamlJs {
 
         private updateLivePreview(query) {
 
-            var select = <HTMLSelectElement>document.getElementById("select-list");
-            var listId: string = select.options[select.selectedIndex].value;
+            var listId: string = localStorage["selectedListId"];
             if (listId != "") {
-
-                localStorage["selectedListId"] = listId;
                 Console.instance.loadingData = true;
                 document.getElementById("loading").style.display = '';
                 if (query.indexOf('<View>') != 0 && query.indexOf('<View ') != 0) {
@@ -444,8 +446,9 @@ module CamlJs {
                 Console.instance.camlCM.getDoc().setValue("");
                 document.getElementById("live-preview").innerHTML = '';
                 Console.instance.loadingData = false;
+                query = "";
             }
-            if (query != "") {
+            if (typeof query == "string" && query != "") {
                 Console.instance.camlCM.getDoc().setValue(vkbeautify.xml(query));
                 Console.instance.updateLivePreview(query);
             }

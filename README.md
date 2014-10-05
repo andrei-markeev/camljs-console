@@ -8,7 +8,7 @@ Using
 
 Navigate to your portal (any page), open the console, and start creating CamlJs queries.
 
-![caml is generated based on camljs code](https://raw.github.com/andrei-markeev/camljs-console/master/Images/camljs-to-caml.png)
+![caml is generated based on camljs code](https://raw.github.com/andrei-markeev/camljs-console/master/Images/full-view.png)
 
 Intellisense:
 
@@ -18,10 +18,23 @@ After query is ready, select a list to test upon, and you'll get the live data p
 
 ![live preview shows data from your SharePoint lists](https://raw.github.com/andrei-markeev/camljs-console/master/Images/live-data-preview.png)
 
-Installing
-----------
+Some more usage notes
+---------------------
 
-If you want to test the extension yourself, you can download the source code and install in "unpacked" mode:
+At the moment, you cannot directly interact with the underlying SharePoint portal via the CamlJs code editor window, but otherwise, any valid JS code will be processed. E.g. you can use arrays, functions and so on:
+
+![dynamic queries](https://raw.github.com/andrei-markeev/camljs-console/master/Images/dynamic-queries.png)
+
+
+Intellisense is enhanced with fields of the list, that you're querying against.
+
+![fields intellisense](https://raw.github.com/andrei-markeev/camljs-console/master/Images/intellisense-fields.png)
+
+
+Installing manually
+-------------------
+
+Extension can be installed to Chrome in "unpacked" mode by following the steps below:
 
  1. Download the source code
  2. Check the "Developer mode" checkbox on the extensions page
