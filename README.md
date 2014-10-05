@@ -3,6 +3,18 @@ CamlJs-Console
 
 Google chrome browser extension that provides a console for creating CamlJS queries right from browser, with live data preview.
 
+Installing
+----------
+Extension is available [from Chrome Web Store](https://chrome.google.com/webstore/detail/camljs-console/ohjcpmdjfihchfhkmimcbklhjdphoeac).
+
+Alternatively, you can install it manually from the source code.
+
+ 1. Download the source code archive from GitHub and unpack it to some folder
+ 2. Check the "Developer mode" checkbox on the extensions page
+ 3. Click [Load unpacked extension...] button
+ 4. Select folder with camljs-console source code
+
+
 Using
 -----
 
@@ -29,14 +41,3 @@ At the moment, you cannot directly interact with the underlying SharePoint porta
 Intellisense is enhanced with fields of the list, that you're querying against.
 
 ![fields intellisense](https://raw.github.com/andrei-markeev/camljs-console/master/Images/intellisense-fields.png)
-
-
-Installing manually
--------------------
-
-Extension can be installed to Chrome in "unpacked" mode by following the steps below:
-
- 1. Download the source code
- 2. Check the "Developer mode" checkbox on the extensions page
- 3. Click [Load unpacked extension...] button
- 4. Select folder with camljs-console source code
