@@ -133,8 +133,22 @@
                     return value.toString();
                 else if (value.get_url)
                     return '<a href="' + value.get_url() + '" title="' + value.get_url() + '">' + value.get_description() + '</a>';
-                else
-                    debugger;
+                else if (value instanceof SP.ContentTypeId)
+                    return value.get_stringValue();
+                else {
+                    try
+                    {
+                        var funcNameRegex = /function (.{1,})\(/;
+                        var results = (funcNameRegex).exec((value).constructor.toString());
+                        var typeName = (results && results.length > 1) ? results[1] : "";
+                        console.log('Unsupported value type: ' + typeName);
+                        return '&lt;value of type ' + typeName + '>';
+                    }
+                    catch(err)
+                    {
+                        return value;
+                    }
+                }
             }
         }
 
