@@ -100,7 +100,20 @@ var CamlBuilder;
             return this;
         };
         ViewInternal.prototype.Scope = function (scope) {
-            this.builder.SetAttributeToLastElement("View", "Scope", scope.toString());
+            switch (scope) {
+                case 2 /* FilesOnly */:
+                    this.builder.SetAttributeToLastElement("View", "Scope", "FilesOnly");
+                    break;
+                case 0 /* Recursive */:
+                    this.builder.SetAttributeToLastElement("View", "Scope", "Recursive");
+                    break;
+                case 1 /* RecursiveAll */:
+                    this.builder.SetAttributeToLastElement("View", "Scope", "RecursiveAll");
+                    break;
+                default:
+                    console.log('Incorrect view scope! Please use values from CamlBuilder.ViewScope enumeration.');
+                    break;
+            }
             return this;
         };
         ViewInternal.prototype.InnerJoin = function (lookupFieldInternalName, alias) {
@@ -155,32 +168,34 @@ var CamlBuilder;
             this.builder = builder;
         }
         JoinsManager.prototype.Finalize = function () {
-            this.builder.WriteStart("Joins");
-            for (var i = 0; i < this.joins.length; i++) {
-                var join = this.joins[i];
-                this.builder.WriteStart("Join", [
-                    { Name: "Type", Value: join.JoinType },
-                    { Name: "ListAlias", Value: join.Alias }
-                ]);
-                this.builder.WriteStart("Eq");
-                this.builder.WriteFieldRef(join.RefFieldName, { RefType: "ID" });
-                this.builder.WriteFieldRef("ID", { List: join.Alias });
+            if (this.joins.length > 0) {
+                this.builder.WriteStart("Joins");
+                for (var i = 0; i < this.joins.length; i++) {
+                    var join = this.joins[i];
+                    this.builder.WriteStart("Join", [
+                        { Name: "Type", Value: join.JoinType },
+                        { Name: "ListAlias", Value: join.Alias }
+                    ]);
+                    this.builder.WriteStart("Eq");
+                    this.builder.WriteFieldRef(join.RefFieldName, { RefType: "ID" });
+                    this.builder.WriteFieldRef("ID", { List: join.Alias });
+                    this.builder.WriteEnd();
+                    this.builder.WriteEnd();
+                }
                 this.builder.WriteEnd();
+                this.builder.WriteStart("ProjectedFields");
+                for (var i = 0; i < this.projectedFields.length; i++) {
+                    var projField = this.projectedFields[i];
+                    this.builder.WriteStart("Field", [
+                        { Name: "ShowField", Value: projField.FieldName },
+                        { Name: "Type", Value: "Lookup" },
+                        { Name: "Name", Value: projField.Alias },
+                        { Name: "List", Value: projField.JoinAlias }
+                    ]);
+                    this.builder.WriteEnd();
+                }
                 this.builder.WriteEnd();
             }
-            this.builder.WriteEnd();
-            this.builder.WriteStart("ProjectedFields");
-            for (var i = 0; i < this.projectedFields.length; i++) {
-                var projField = this.projectedFields[i];
-                this.builder.WriteStart("Field", [
-                    { Name: "ShowField", Value: projField.FieldName },
-                    { Name: "Type", Value: "Lookup" },
-                    { Name: "Name", Value: projField.Alias },
-                    { Name: "List", Value: projField.JoinAlias }
-                ]);
-                this.builder.WriteEnd();
-            }
-            this.builder.WriteEnd();
         };
 
         JoinsManager.prototype.Join = function (lookupFieldInternalName, alias, joinType) {
@@ -727,7 +742,7 @@ var CamlBuilder;
         }
         Builder.prototype.SetAttributeToLastElement = function (tagName, attributeName, attributeValue) {
             for (var i = this.tree.length - 1; i >= 0; i--) {
-                if (this.tree[i].Element == "View") {
+                if (this.tree[i].Name == tagName) {
                     this.tree[i].Attributes = this.tree[i].Attributes || [];
                     this.tree[i].Attributes.push({ Name: attributeName, Value: attributeValue });
                     return;
