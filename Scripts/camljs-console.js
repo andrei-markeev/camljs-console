@@ -1,4 +1,5 @@
-﻿var CamlJs;
+/// <reference path="typings/chrome/chrome.d.ts" />
+var CamlJs;
 (function (CamlJs) {
     var ChromeIntegration = (function () {
         function ChromeIntegration() {
@@ -8,29 +9,26 @@
                 chrome.runtime.onConnect.addListener(function (port) {
                     port.onMessage.addListener(listener);
                 });
-
                 chrome.tabs.executeScript({
                     file: 'Scripts/livePreview.js'
                 });
             }
         };
-
         ChromeIntegration.executeInContentScriptContext = function (code) {
             if (!window["chrome"] || !chrome.tabs)
                 return false;
-
             chrome.tabs.executeScript({
                 code: code
             });
-
             return true;
         };
         return ChromeIntegration;
-    })();
+    }());
     CamlJs.ChromeIntegration = ChromeIntegration;
 })(CamlJs || (CamlJs = {}));
+/// <reference path="typings/jquery/jquery.d.ts" />
+/// <reference path="typings/bootstrap/bootstrap.d.ts" />
 var vkbeautify;
-
 var CamlJs;
 (function (CamlJs) {
     var Console = (function () {
@@ -46,22 +44,17 @@ var CamlJs;
             Console.instance = new Console();
             Console.instance.initialize();
         };
-
         Console.prototype.initialize = function () {
             Console.instance.typeScriptService = new CamlJs.TypeScriptService();
             Console.instance.editorCM = Console.instance.initCamlJsEditor();
             Console.instance.initCamlXmlViewer();
             Console.instance.initListSelect();
-
             Console.instance.loadingData = false;
             Console.instance.haveViewFields = false;
             Console.instance.setBadge(0);
-
             CamlJs.ChromeIntegration.init(Console.instance.livePreviewMessageListener);
-
             Console.instance.compileCAML(Console.instance.editorCM.getDoc());
         };
-
         Console.prototype.initCamlJsEditor = function () {
             var editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
                 lineNumbers: true,
@@ -71,19 +64,14 @@ var CamlJs;
             editor.setSize(null, "100%");
             if (localStorage["editorText"])
                 editor.getDoc().setValue(localStorage["editorText"]);
-
             editor.on("cursorActivity", function (cm) {
                 if (cm.getDoc().getCursor().line != Console.instance.tooltipLastPos.line || cm.getDoc().getCursor().ch < Console.instance.tooltipLastPos.ch) {
                     $('.tooltip').remove();
                 }
             });
-
-            editor.on("change", function (editor, changeList) {
-                Console.instance.compileCAML(editor.getDoc(), changeList);
-            });
+            editor.on("change", function (editor, changeList) { Console.instance.compileCAML(editor.getDoc(), changeList); });
             return editor;
         };
-
         Console.prototype.initCamlXmlViewer = function () {
             Console.instance.camlCM = CodeMirror.fromTextArea(document.getElementById("caml"), {
                 readOnly: true,
@@ -91,7 +79,6 @@ var CamlJs;
             });
             Console.instance.camlCM.setSize(null, "100%");
         };
-
         Console.prototype.initListSelect = function () {
             var self = this;
             var select = document.getElementById("select-list");
@@ -101,11 +88,9 @@ var CamlJs;
                 var listId = select.options[select.selectedIndex].value;
                 if (listId != "")
                     localStorage["selectedListId"] = listId;
-
                 Console.instance.compileCAML(Console.instance.editorCM.getDoc());
             };
         };
-
         Console.prototype.updateLivePreview = function (query) {
             var listId = localStorage["selectedListId"];
             if (listId != "") {
@@ -121,7 +106,8 @@ var CamlJs;
                     }
                     query = "<View>" + viewFieldsString + "<Query>" + query + "</Query></View>";
                     Console.instance.queryViewFields[listId] = null;
-                } else {
+                }
+                else {
                     Console.instance.queryViewFields[listId] = [];
                     var viewFields = $(query).find("viewfields fieldref");
                     for (var j = 0; j < viewFields.length; j++) {
@@ -135,28 +121,27 @@ var CamlJs;
                 }
             }
         };
-
         Console.prototype.livePreviewMessageListener = function (msg) {
             if (msg.type == "lists") {
                 Console.instance.setupListsDropdown(msg.lists);
-            } else if (msg.type == "fieldsInfo") {
+            }
+            else if (msg.type == "fieldsInfo") {
                 Console.instance.rememberFieldsInfo(msg.fieldsInfo);
-
                 if (localStorage["selectedListId"])
                     Console.instance.compileCAML(Console.instance.editorCM.getDoc());
-            } else if (msg.type == "items") {
+            }
+            else if (msg.type == "items") {
                 Console.instance.setBadge(msg.items.length);
                 Console.instance.haveViewFields = Console.instance.viewFieldsForList[localStorage["selectedListId"]] != null;
-
                 document.getElementById("live-preview").innerHTML = Console.instance.generateItemsHtml(msg.items);
                 document.getElementById("loading").style.display = 'none';
-            } else if (msg.type == "error") {
+            }
+            else if (msg.type == "error") {
                 document.getElementById("live-preview").innerHTML = msg.error;
                 document.getElementById("loading").style.display = 'none';
                 Console.instance.setBadge(0);
             }
         };
-
         Console.prototype.setupListsDropdown = function (lists) {
             var select = document.getElementById("select-list");
             while (select.childNodes.length > 1) {
@@ -167,7 +152,6 @@ var CamlJs;
                 option.value = lists[i].id;
                 option.innerHTML = lists[i].title;
                 select.appendChild(option);
-
                 if (option.value == localStorage["selectedListId"])
                     option.selected = true;
             }
@@ -175,30 +159,27 @@ var CamlJs;
             if (!Console.instance.loadingData)
                 document.getElementById("loading").style.display = 'none';
         };
-
         Console.prototype.rememberFieldsInfo = function (fieldsInfo) {
             for (var i = 0; i < fieldsInfo.length; i++) {
                 var viewFields = fieldsInfo[i].viewFields;
-
                 var docIconIndex = viewFields.indexOf("DocIcon");
                 if (docIconIndex > -1)
                     viewFields.splice(docIconIndex, 1);
-
                 for (var j = 0; j < viewFields.length; j++) {
                     if (viewFields[j] == "LinkTitle" || viewFields[j] == "LinkTitleNoMenu" || viewFields[j] == "LinkDiscussionTitle")
                         viewFields[j] = "Title";
                     if (viewFields[j] == "LinkFilename" || viewFields[j] == "LinkFilenameNoMenu")
                         viewFields[j] = "FileLeafRef";
                 }
-
                 Console.instance.viewFieldsForList[fieldsInfo[i].id] = viewFields;
-
                 var fieldsByOriginalType = fieldsInfo[i].listFieldsByType;
                 var fieldsByType = {};
                 for (var type in fieldsByOriginalType) {
                     var fType = type;
-                    if (type == "Guid" || type == "Note" || type == "Computed" || type == "ModStat" || type == "ContentTypeId" || type == "TargetTo" || type == "File")
+                    if (type == "Guid" || type == "Note" || type == "Computed" || type == "ContentTypeId" || type == "TargetTo" || type == "File")
                         fType = "Text";
+                    if (type == "ModStat")
+                        fType = "ModStat";
                     if (type == "TaxonomyFieldType")
                         fType = "Lookup";
                     if (type == "TaxonomyFieldTypeMulti")
@@ -209,18 +190,14 @@ var CamlJs;
                         fType = "Number";
                     if (type == "Attachments")
                         fType = "Boolean";
-
                     if (!fieldsByType[fType])
                         fieldsByType[fType] = [];
-
                     for (var k = 0; k < fieldsByOriginalType[type].length; k++)
                         fieldsByType[fType].push(fieldsByOriginalType[type][k]);
                 }
-
                 Console.instance.listFieldsByType[fieldsInfo[i].id] = fieldsByType;
             }
         };
-
         Console.prototype.generateItemsHtml = function (items) {
             var html = "<span class='total'>Rows returned: " + items.length + "</span>";
             if (Console.instance.haveViewFields) {
@@ -242,7 +219,8 @@ var CamlJs;
                     html += "</tr>";
                 }
                 html += "</tbody></table>";
-            } else {
+            }
+            else {
                 html += "<ul class='items-preview'>";
                 for (var i = 0; i < items.length; i++) {
                     html += "<li>" + items[i].Title + "</li>";
@@ -251,7 +229,6 @@ var CamlJs;
             }
             return html;
         };
-
         Console.prototype.setBadge = function (n) {
             var badge = document.getElementById("badge");
             if (n == 0)
@@ -261,7 +238,6 @@ var CamlJs;
                 badge.innerHTML = n;
             }
         };
-
         Console.prototype.showCodeMirrorHint = function (cm, list) {
             list.sort(function (l, r) {
                 if (l.displayText > r.displayText)
@@ -270,7 +246,6 @@ var CamlJs;
                     return -1;
                 return 0;
             });
-
             cm.getEditor()["showHint"]({
                 completeSingle: false,
                 hint: function (cm) {
@@ -283,23 +258,22 @@ var CamlJs;
                             if (list[i].livePreview == false)
                                 show_words.push(list[i]);
                         }
-
                         completionInfo = { from: cur, to: cur, list: show_words };
-                    } else if (token.string == "," || token.string == "(") {
+                    }
+                    else if (token.string == "," || token.string == "(") {
                         completionInfo = { from: cur, to: cur, list: list };
-                    } else {
+                    }
+                    else {
                         for (var i = 0; i < list.length; i++) {
                             if (list[i].text.toLowerCase().indexOf(token.string.toLowerCase()) > -1)
                                 show_words.push(list[i]);
                         }
-
                         completionInfo = {
                             from: { line: cur.line, ch: token.start },
                             to: { line: cur.line, ch: token.end },
                             list: show_words
                         };
                     }
-
                     var tooltip;
                     CodeMirror.on(completionInfo, "select", function (completion, element) {
                         $('.tooltip').remove();
@@ -315,21 +289,16 @@ var CamlJs;
                     CodeMirror.on(completionInfo, "close", function () {
                         $('.tooltip').remove();
                     });
-
                     return completionInfo;
                 }
             });
         };
-
         Console.prototype.showAutoCompleteDropDown = function (cm, changePosition) {
             var scriptPosition = cm.indexFromPos(changePosition) + 1;
             var completions = Console.instance.typeScriptService.getCompletions(scriptPosition);
-
             if (completions == null)
                 return;
-
             $('.tooltip').remove();
-
             var list = [];
             for (var i = 0; i < completions.entries.length; i++) {
                 var details = Console.instance.typeScriptService.getCompletionDetails(scriptPosition, completions.entries[i].name);
@@ -361,17 +330,17 @@ var CamlJs;
                     }
                 }
             }
-
             Console.instance.showCodeMirrorHint(cm, list);
         };
-
         Console.prototype.showFunctionTooltip = function (cm, changePosition) {
             $('.tooltip').remove();
-
             var signature = Console.instance.typeScriptService.getSignature(cm.indexFromPos(changePosition) + 1);
-
             if (signature) {
-                if (signature.actual.currentParameter != -1 && !signature.actual.currentParameterIsTypeParameter && (signature.formal[signature.activeFormal].parameters[signature.actual.currentParameter].name == "viewFields" || signature.formal[signature.activeFormal].parameters[signature.actual.currentParameter].name == "fieldInternalName")) {
+                if (signature.actual.currentParameter != -1
+                    && !signature.actual.currentParameterIsTypeParameter
+                    &&
+                        (signature.formal[signature.activeFormal].parameters[signature.actual.currentParameter].name == "viewFields"
+                            || signature.formal[signature.activeFormal].parameters[signature.actual.currentParameter].name == "fieldInternalName")) {
                     var listId = localStorage["selectedListId"];
                     var list = [];
                     for (var t in Console.instance.listFieldsByType[listId]) {
@@ -387,11 +356,9 @@ var CamlJs;
                     Console.instance.showCodeMirrorHint(cm, list);
                     return;
                 }
-
                 Console.instance.tooltipLastPos = changePosition;
                 var cursorCoords = cm.getEditor().cursorCoords(cm.getCursor(), "page");
                 var domElement = cm.getEditor().getWrapperElement();
-
                 $(domElement).data('bs.tooltip', false).tooltip({
                     html: true,
                     title: '<div class="tooltip-typeInfo">' + signature.formal[0].signatureInfo + '</div>' + '<div class="tooltip-docComment">' + signature.formal[0].docComment.replace('\n', '<br/>') + '</div>',
@@ -403,22 +370,20 @@ var CamlJs;
                 $(domElement).tooltip('show');
             }
         };
-
         Console.prototype.compileCAML = function (cm, changeObj) {
             localStorage["editorText"] = cm.getValue();
-
             if (changeObj)
                 Console.instance.typeScriptService.scriptChanged(cm.getValue(), cm.indexFromPos(changeObj.from), cm.indexFromPos(changeObj.to) - cm.indexFromPos(changeObj.from));
-
             if (changeObj && changeObj.text.length == 1 && (changeObj.text[0] == '.' || changeObj.text[0] == ' ')) {
                 Console.instance.showAutoCompleteDropDown(cm, changeObj.to);
                 return;
-            } else if (changeObj && changeObj.text.length == 1 && (changeObj.text[0] == '(' || changeObj.text[0] == ',')) {
+            }
+            else if (changeObj && changeObj.text.length == 1 && (changeObj.text[0] == '(' || changeObj.text[0] == ',')) {
                 Console.instance.showFunctionTooltip(cm, changeObj.to);
-            } else if (changeObj && changeObj.text.length == 1 && changeObj.text[0] == ')') {
+            }
+            else if (changeObj && changeObj.text.length == 1 && changeObj.text[0] == ')') {
                 $('.tooltip').remove();
             }
-
             var allMarkers = cm.getAllMarks();
             for (var i = 0; i < allMarkers.length; i++) {
                 allMarkers[i].clear();
@@ -432,11 +397,11 @@ var CamlJs;
                     });
                 }
             }
-
             var query = "";
-            try  {
+            try {
                 eval(cm.getValue());
-            } catch (err) {
+            }
+            catch (err) {
                 console.log("evaluation error");
                 Console.instance.camlCM.getDoc().setValue("");
                 document.getElementById("live-preview").innerHTML = '';
@@ -449,7 +414,7 @@ var CamlJs;
             }
         };
         return Console;
-    })();
+    }());
     CamlJs.Console = Console;
 })(CamlJs || (CamlJs = {}));
 var CamlJs;
@@ -464,86 +429,43 @@ var CamlJs;
             this.libText = libText;
             this.libTextLength = libText.length;
         }
-        TypeScriptServiceHost.prototype.log = function (message) {
-            console.log("tsHost: " + message);
-        };
-        TypeScriptServiceHost.prototype.information = function () {
-            return true;
-        };
-        TypeScriptServiceHost.prototype.debug = function () {
-            return true;
-        };
-        TypeScriptServiceHost.prototype.warning = function () {
-            return true;
-        };
-        TypeScriptServiceHost.prototype.error = function () {
-            return true;
-        };
-        TypeScriptServiceHost.prototype.fatal = function () {
-            return true;
-        };
-        TypeScriptServiceHost.prototype.getCompilationSettings = function () {
-            return "{ \"noLib\": true }";
-        };
-        TypeScriptServiceHost.prototype.getScriptFileNames = function () {
-            return "[\"camljs-console.ts\", \"camljs.ts\"]";
-        };
-        TypeScriptServiceHost.prototype.getScriptVersion = function (fn) {
-            if (fn == 'camljs.ts')
-                return 0;
-            else
-                return this.scriptVersion;
-        };
-        TypeScriptServiceHost.prototype.getScriptIsOpen = function (fn) {
-            return true;
-        };
-        TypeScriptServiceHost.prototype.getLocalizedDiagnosticMessages = function () {
-            return "";
-        };
-        TypeScriptServiceHost.prototype.getCancellationToken = function () {
-            return null;
-        };
-        TypeScriptServiceHost.prototype.getScriptByteOrderMark = function (fn) {
+        TypeScriptServiceHost.prototype.log = function (message) { console.log("tsHost: " + message); };
+        TypeScriptServiceHost.prototype.information = function () { return true; };
+        TypeScriptServiceHost.prototype.debug = function () { return true; };
+        TypeScriptServiceHost.prototype.warning = function () { return true; };
+        TypeScriptServiceHost.prototype.error = function () { return true; };
+        TypeScriptServiceHost.prototype.fatal = function () { return true; };
+        TypeScriptServiceHost.prototype.getCompilationSettings = function () { return "{ \"noLib\": true }"; };
+        TypeScriptServiceHost.prototype.getScriptFileNames = function () { return "[\"camljs-console.ts\", \"camljs.ts\"]"; };
+        TypeScriptServiceHost.prototype.getScriptVersion = function (fn) { if (fn == 'camljs.ts')
             return 0;
-        };
-
-        TypeScriptServiceHost.prototype.resolveRelativePath = function () {
-            return null;
-        };
-        TypeScriptServiceHost.prototype.fileExists = function (fn) {
-            return null;
-        };
-        TypeScriptServiceHost.prototype.directoryExists = function (dir) {
-            return null;
-        };
-        TypeScriptServiceHost.prototype.getParentDirectory = function (dir) {
-            return null;
-        };
-        TypeScriptServiceHost.prototype.getDiagnosticsObject = function () {
-            return null;
-        };
-
+        else
+            return this.scriptVersion; };
+        TypeScriptServiceHost.prototype.getScriptIsOpen = function (fn) { return true; };
+        TypeScriptServiceHost.prototype.getLocalizedDiagnosticMessages = function () { return ""; };
+        TypeScriptServiceHost.prototype.getCancellationToken = function () { return null; };
+        TypeScriptServiceHost.prototype.getScriptByteOrderMark = function (fn) { return 0; };
+        TypeScriptServiceHost.prototype.resolveRelativePath = function () { return null; };
+        TypeScriptServiceHost.prototype.fileExists = function (fn) { return null; };
+        TypeScriptServiceHost.prototype.directoryExists = function (dir) { return null; };
+        TypeScriptServiceHost.prototype.getParentDirectory = function (dir) { return null; };
+        TypeScriptServiceHost.prototype.getDiagnosticsObject = function () { return null; };
         TypeScriptServiceHost.prototype.getScriptSnapshot = function (fn) {
             var snapshot, snapshotChanges, snapshotVersion;
             if (fn == 'camljs.ts') {
                 snapshot = TypeScript.ScriptSnapshot.fromString(this.libText);
                 snapshotChanges = [];
                 snapshotVersion = 0;
-            } else {
+            }
+            else {
                 snapshot = TypeScript.ScriptSnapshot.fromString(this.text);
                 snapshotChanges = this.changes;
                 snapshotVersion = this.scriptVersion;
             }
             return {
-                getText: function (s, e) {
-                    return snapshot.getText(s, e);
-                },
-                getLength: function () {
-                    return snapshot.getLength();
-                },
-                getLineStartPositions: function () {
-                    return "[" + snapshot.getLineStartPositions().toString() + "]";
-                },
+                getText: function (s, e) { return snapshot.getText(s, e); },
+                getLength: function () { return snapshot.getLength(); },
+                getLineStartPositions: function () { return "[" + snapshot.getLineStartPositions().toString() + "]"; },
                 getTextChangeRangeSinceVersion: function (version) {
                     if (snapshotVersion == 0)
                         return null;
@@ -552,18 +474,14 @@ var CamlJs;
                 }
             };
         };
-
-        TypeScriptServiceHost.prototype.getLibLength = function () {
-            return this.libTextLength;
-        };
+        TypeScriptServiceHost.prototype.getLibLength = function () { return this.libTextLength; };
         TypeScriptServiceHost.prototype.scriptChanged = function (newText, startPos, changeLength) {
             this.scriptVersion++;
             this.text = newText;
             this.changes.push(new TypeScript.TextChangeRange(new TypeScript.TextSpan(startPos, changeLength), newText.length));
         };
         return TypeScriptServiceHost;
-    })();
-
+    }());
     var TypeScriptService = (function () {
         function TypeScriptService() {
             var self = this;
@@ -572,7 +490,6 @@ var CamlJs;
             client.onreadystatechange = function () {
                 if (client.readyState != 4)
                     return;
-
                 self.tsHost = new TypeScriptServiceHost(client.responseText);
                 var tsFactory = new TypeScript.Services.TypeScriptServicesFactory();
                 self.tsServiceShim = tsFactory.createLanguageServiceShim(self.tsHost);
@@ -582,25 +499,21 @@ var CamlJs;
         TypeScriptService.prototype.scriptChanged = function (newText, startPos, changeLength) {
             this.tsHost.scriptChanged(newText, startPos, changeLength);
         };
-
         TypeScriptService.prototype.getCompletions = function (position) {
             return this.tsServiceShim.languageService.getCompletionsAtPosition('camljs-console.ts', position, true);
         };
-
         TypeScriptService.prototype.getCompletionDetails = function (position, name) {
             return this.tsServiceShim.languageService.getCompletionEntryDetails('camljs-console.ts', position, name);
         };
-
         TypeScriptService.prototype.getSignature = function (position) {
             return this.tsServiceShim.languageService.getSignatureAtPosition('camljs-console.ts', position);
         };
-
         TypeScriptService.prototype.getErrors = function () {
             var syntastic = this.tsServiceShim.languageService.getSyntacticDiagnostics('camljs-console.ts');
             var semantic = this.tsServiceShim.languageService.getSemanticDiagnostics('camljs-console.ts');
             return syntastic.concat(semantic);
         };
         return TypeScriptService;
-    })();
+    }());
     CamlJs.TypeScriptService = TypeScriptService;
 })(CamlJs || (CamlJs = {}));

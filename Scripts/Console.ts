@@ -184,8 +184,10 @@ module CamlJs {
                 var fieldsByType: { [type: string]: string[] } = {};
                 for (var type in fieldsByOriginalType) {
                     var fType = type;
-                    if (type == "Guid" || type == "Note" || type == "Computed" || type == "ModStat" || type == "ContentTypeId" || type == "TargetTo" || type == "File")
+                    if (type == "Guid" || type == "Note" || type == "Computed" || type == "ContentTypeId" || type == "TargetTo" || type == "File")
                         fType = "Text";
+                    if (type == "ModStat")
+                        fType = "ModStat";
                     if (type == "TaxonomyFieldType")
                         fType = "Lookup";
                     if (type == "TaxonomyFieldTypeMulti")
