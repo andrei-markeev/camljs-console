@@ -1,7 +1,7 @@
 CamlJs-Console
 ==============
 
-Google chrome browser extension that provides a console for creating CamlJS queries right from browser, with live data preview.
+Google chrome browser extension that provides a console for creating [CamlJS](https://github.com/andrei-markeev/camljs) queries right from browser, with live data preview.
 
 Installing
 ----------
