@@ -1,4 +1,5 @@
-var CamlBuilder = (function () {
+"use strict";
+var CamlBuilder = /** @class */ (function () {
     function CamlBuilder() {
     }
     /** Generate CAML Query, starting from <Where> tag */
@@ -19,7 +20,7 @@ var CamlBuilder = (function () {
         1. SPServices CAMLQuery attribute
         2. Creating partial expressions
         3. In conjunction with Any & All clauses
-         */
+    */
     CamlBuilder.Expression = function () {
         return CamlBuilder.Internal.createExpression();
     };
@@ -31,11 +32,8 @@ var CamlBuilder = (function () {
 (function (CamlBuilder) {
     var ViewScope;
     (function (ViewScope) {
-        /**  */
         ViewScope[ViewScope["Recursive"] = 0] = "Recursive";
-        /**  */
         ViewScope[ViewScope["RecursiveAll"] = 1] = "RecursiveAll";
-        /**  */
         ViewScope[ViewScope["FilesOnly"] = 2] = "FilesOnly";
     })(ViewScope = CamlBuilder.ViewScope || (CamlBuilder.ViewScope = {}));
     var DateRangesOverlapType;
@@ -52,7 +50,7 @@ var CamlBuilder = (function () {
         /** Returns events for one year, specified by CalendarDate in QueryOptions */
         DateRangesOverlapType[DateRangesOverlapType["Year"] = 4] = "Year";
     })(DateRangesOverlapType = CamlBuilder.DateRangesOverlapType || (CamlBuilder.DateRangesOverlapType = {}));
-    var Internal = (function () {
+    var Internal = /** @class */ (function () {
         function Internal() {
         }
         Internal.createView = function (viewFields) {
@@ -73,7 +71,7 @@ var CamlBuilder = (function () {
         return Internal;
     }());
     CamlBuilder.Internal = Internal;
-    var ViewInternal = (function () {
+    var ViewInternal = /** @class */ (function () {
         function ViewInternal() {
             this.builder = new Builder();
         }
@@ -110,8 +108,7 @@ var CamlBuilder = (function () {
                     this.builder.SetAttributeToLastElement("View", "Scope", "RecursiveAll");
                     break;
                 default:
-                    console.log('Incorrect view scope! Please use values from CamlBuilder.ViewScope enumeration.');
-                    break;
+                    throw new Error('Incorrect view scope! Please use values from CamlBuilder.ViewScope enumeration.');
             }
             return this;
         };
@@ -145,7 +142,7 @@ var CamlBuilder = (function () {
         return ViewInternal;
     }());
     /** Represents SharePoint CAML Query element */
-    var QueryInternal = (function () {
+    var QueryInternal = /** @class */ (function () {
         function QueryInternal(builder) {
             this.builder = builder || new Builder();
         }
@@ -189,7 +186,7 @@ var CamlBuilder = (function () {
         };
         return QueryInternal;
     }());
-    var JoinsManager = (function () {
+    var JoinsManager = /** @class */ (function () {
         function JoinsManager(builder, viewInternal) {
             this.projectedFields = [];
             this.joins = [];
@@ -206,7 +203,10 @@ var CamlBuilder = (function () {
                         { Name: "ListAlias", Value: join.Alias }
                     ]);
                     this.builder.WriteStart("Eq");
-                    this.builder.WriteFieldRef(join.RefFieldName, { RefType: "ID" });
+                    var fieldAttrs = { RefType: "ID" };
+                    if (join.FromList)
+                        fieldAttrs["List"] = join.FromList;
+                    this.builder.WriteFieldRef(join.RefFieldName, fieldAttrs);
                     this.builder.WriteFieldRef("ID", { List: join.Alias });
                     this.builder.WriteEnd();
                     this.builder.WriteEnd();
@@ -226,8 +226,8 @@ var CamlBuilder = (function () {
                 this.builder.WriteEnd();
             }
         };
-        JoinsManager.prototype.Join = function (lookupFieldInternalName, alias, joinType) {
-            this.joins.push({ RefFieldName: lookupFieldInternalName, Alias: alias, JoinType: joinType });
+        JoinsManager.prototype.Join = function (lookupFieldInternalName, alias, joinType, fromList) {
+            this.joins.push({ RefFieldName: lookupFieldInternalName, Alias: alias, JoinType: joinType, FromList: fromList });
             return new Join(this.builder, this);
         };
         JoinsManager.prototype.ProjectedField = function (remoteFieldInternalName, remoteFieldAlias) {
@@ -236,7 +236,7 @@ var CamlBuilder = (function () {
         };
         return JoinsManager;
     }());
-    var Join = (function () {
+    var Join = /** @class */ (function () {
         function Join(builder, joinsManager) {
             this.builder = builder;
             this.joinsManager = joinsManager;
@@ -246,15 +246,15 @@ var CamlBuilder = (function () {
         Join.prototype.Select = function (remoteFieldInternalName, remoteFieldAlias) {
             return this.joinsManager.ProjectedField(remoteFieldInternalName, remoteFieldAlias);
         };
-        Join.prototype.InnerJoin = function (lookupFieldInternalName, alias) {
-            return this.joinsManager.Join(lookupFieldInternalName, alias, "INNER");
+        Join.prototype.InnerJoin = function (lookupFieldInternalName, alias, fromList) {
+            return this.joinsManager.Join(lookupFieldInternalName, alias, "INNER", fromList);
         };
-        Join.prototype.LeftJoin = function (lookupFieldInternalName, alias) {
-            return this.joinsManager.Join(lookupFieldInternalName, alias, "LEFT");
+        Join.prototype.LeftJoin = function (lookupFieldInternalName, alias, fromList) {
+            return this.joinsManager.Join(lookupFieldInternalName, alias, "LEFT", fromList);
         };
         return Join;
     }());
-    var QueryToken = (function () {
+    var QueryToken = /** @class */ (function () {
         function QueryToken(builder, startIndex) {
             this.builder = builder;
             this.startIndex = startIndex;
@@ -315,7 +315,7 @@ var CamlBuilder = (function () {
         ModifyType[ModifyType["AppendOr"] = 1] = "AppendOr";
         ModifyType[ModifyType["AppendAnd"] = 2] = "AppendAnd";
     })(ModifyType || (ModifyType = {}));
-    var RawQueryInternal = (function () {
+    var RawQueryInternal = /** @class */ (function () {
         function RawQueryInternal(xml) {
             this.xml = xml;
         }
@@ -336,7 +336,7 @@ var CamlBuilder = (function () {
             var xmlDoc = this.getXmlDocument(this.xml);
             var whereBuilder = this.parseRecursive(builder, xmlDoc.documentElement, modifyType);
             if (whereBuilder == null)
-                console.log("CamlJs error: cannot find Query tag in provided XML");
+                throw new Error("CamlJs error: cannot find Query tag in provided XML");
             builder.WriteStart("Where");
             builder.unclosedTags++;
             switch (modifyType) {
@@ -355,8 +355,7 @@ var CamlBuilder = (function () {
                     builder.tree = builder.tree.concat(whereBuilder.tree);
                     return new FieldExpression(builder);
                 default:
-                    console.log("CamlJs error: unknown ModifyType " + modifyType);
-                    return null;
+                    throw new Error("CamlJs error: unknown ModifyType " + modifyType);
             }
         };
         RawQueryInternal.prototype.getXmlDocument = function (xml) {
@@ -365,7 +364,8 @@ var CamlBuilder = (function () {
                 var parser = new DOMParser();
                 xmlDoc = parser.parseFromString(this.xml, "text/xml");
             }
-            else {
+            else // Internet Explorer
+             {
                 xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
                 xmlDoc["async"] = false;
                 xmlDoc["loadXML"](this.xml);
@@ -406,7 +406,7 @@ var CamlBuilder = (function () {
         };
         return RawQueryInternal;
     }());
-    var FieldExpression = (function () {
+    var FieldExpression = /** @class */ (function () {
         function FieldExpression(builder) {
             this.builder = builder;
         }
@@ -418,6 +418,11 @@ var CamlBuilder = (function () {
         FieldExpression.prototype.ChoiceField = function (internalName) {
             return new FieldExpressionToken(this.builder, internalName, "Choice");
         };
+        /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is Computed */
+        FieldExpression.prototype.ComputedField = function (internalName) {
+            return new FieldExpressionToken(this.builder, internalName, "Computed");
+        };
+        ;
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is Boolean */
         FieldExpression.prototype.BooleanField = function (internalName) {
             return new FieldExpressionToken(this.builder, internalName, "Integer");
@@ -541,7 +546,7 @@ var CamlBuilder = (function () {
         FieldMultiExpressionType[FieldMultiExpressionType["UserMulti"] = 0] = "UserMulti";
         FieldMultiExpressionType[FieldMultiExpressionType["LookupMulti"] = 1] = "LookupMulti";
     })(FieldMultiExpressionType || (FieldMultiExpressionType = {}));
-    var LookupOrUserMultiFieldExpression = (function () {
+    var LookupOrUserMultiFieldExpression = /** @class */ (function () {
         function LookupOrUserMultiFieldExpression(builder, name, type) {
             this.builder = builder;
             this.name = name;
@@ -577,7 +582,7 @@ var CamlBuilder = (function () {
         };
         return LookupOrUserMultiFieldExpression;
     }());
-    var LookupFieldExpression = (function () {
+    var LookupFieldExpression = /** @class */ (function () {
         function LookupFieldExpression(builder, name) {
             this.builder = builder;
             this.name = name;
@@ -605,7 +610,7 @@ var CamlBuilder = (function () {
         };
         return LookupFieldExpression;
     }());
-    var UserFieldExpression = (function () {
+    var UserFieldExpression = /** @class */ (function () {
         function UserFieldExpression(builder, name) {
             var self = this;
             this.builder = builder;
@@ -675,7 +680,7 @@ var CamlBuilder = (function () {
         };
         return UserFieldExpression;
     }());
-    var ModStatFieldExpression = (function () {
+    var ModStatFieldExpression = /** @class */ (function () {
         function ModStatFieldExpression(builder, name) {
             this.builder = builder;
             this.name = name;
@@ -698,7 +703,7 @@ var CamlBuilder = (function () {
         };
         return ModStatFieldExpression;
     }());
-    var FieldExpressionToken = (function () {
+    var FieldExpressionToken = /** @class */ (function () {
         function FieldExpressionToken(builder, name, valueType, isLookupId) {
             this.builder = builder;
             this.name = name;
@@ -785,7 +790,7 @@ var CamlBuilder = (function () {
         };
         return FieldExpressionToken;
     }());
-    var GroupedQuery = (function () {
+    var GroupedQuery = /** @class */ (function () {
         function GroupedQuery(builder) {
             this.builder = builder;
         }
@@ -807,7 +812,7 @@ var CamlBuilder = (function () {
         };
         return GroupedQuery;
     }());
-    var SortedQuery = (function () {
+    var SortedQuery = /** @class */ (function () {
         function SortedQuery(builder) {
             this.builder = builder;
         }
@@ -827,7 +832,7 @@ var CamlBuilder = (function () {
         };
         return SortedQuery;
     }());
-    var Builder = (function () {
+    var Builder = /** @class */ (function () {
         function Builder() {
             this.tree = new Array();
             this.unclosedTags = 0;
@@ -840,7 +845,7 @@ var CamlBuilder = (function () {
                     return;
                 }
             }
-            console.log("CamlJs ERROR: can't find element '" + tagName + "' in the tree while setting attribute " + attributeName + " to '" + attributeValue + "'!");
+            throw new Error("CamlJs ERROR: can't find element '" + tagName + "' in the tree while setting attribute " + attributeName + " to '" + attributeValue + "'!");
         };
         Builder.prototype.WriteRowLimit = function (paged, limit) {
             if (paged)
@@ -949,8 +954,8 @@ var CamlBuilder = (function () {
             }
         };
         Builder.prototype.Finalize = function () {
-            var sb = new window["Sys"].StringBuilder();
-            var writer = window["SP"].XmlWriter.create(sb);
+            var sb = new Sys.StringBuilder();
+            var writer = SP.XmlWriter.create(sb);
             for (var i = 0; i < this.tree.length; i++) {
                 if (this.tree[i].Element == "FieldRef") {
                     writer.writeStartElement("FieldRef");
@@ -1014,13 +1019,13 @@ var CamlBuilder = (function () {
             var camlQuery = this.Finalize();
             if (camlQuery.indexOf("<View") != 0)
                 camlQuery = "<View><Query>" + camlQuery + "</Query></View>";
-            var query = new window["SP"].CamlQuery();
+            var query = new SP.CamlQuery();
             query.set_viewXml(camlQuery);
             return query;
         };
         return Builder;
     }());
-    var CamlValues = (function () {
+    var CamlValues = /** @class */ (function () {
         function CamlValues() {
         }
         /** Dynamic value that represents current date with specified offset (may be negative) */
@@ -1081,210 +1086,212 @@ var CamlBuilder = (function () {
     CamlBuilder.CamlValues = CamlValues;
 })(CamlBuilder || (CamlBuilder = {}));
 // -------------------- Dependencies ------------------
-if (typeof (window["Sys"]) == "undefined" || window["Sys"] == null) {
-    window["Sys"] = {};
-    window["Sys"].StringBuilder = function Sys$StringBuilder(initialText) {
-        this._parts = (typeof (initialText) !== 'undefined' && initialText !== null && initialText !== '') ?
-            [initialText.toString()] : [];
-        this._value = {};
-        this._len = 0;
-    };
-    function Sys$StringBuilder$append(text) {
-        this._parts[this._parts.length] = text;
-    }
-    function Sys$StringBuilder$appendLine(text) {
-        this._parts[this._parts.length] =
-            ((typeof (text) === 'undefined') || (text === null) || (text === '')) ?
-                '\r\n' : text + '\r\n';
-    }
-    function Sys$StringBuilder$clear() {
-        this._parts = [];
-        this._value = {};
-        this._len = 0;
-    }
-    function Sys$StringBuilder$isEmpty() {
-        if (this._parts.length === 0)
-            return true;
-        return this.toString() === '';
-    }
-    function Sys$StringBuilder$toString(separator) {
-        separator = separator || '';
-        var parts = this._parts;
-        if (this._len !== parts.length) {
+(function (window) {
+    if (typeof (window["Sys"]) == "undefined" || window["Sys"] == null) {
+        window["Sys"] = {};
+        window["Sys"].StringBuilder = function Sys$StringBuilder(initialText) {
+            this._parts = (typeof (initialText) !== 'undefined' && initialText !== null && initialText !== '') ?
+                [initialText.toString()] : [];
             this._value = {};
-            this._len = parts.length;
-        }
-        var val = this._value;
-        if (typeof (val[separator]) === 'undefined') {
-            if (separator !== '') {
-                for (var i = 0; i < parts.length;) {
-                    if ((typeof (parts[i]) === 'undefined') || (parts[i] === '') || (parts[i] === null)) {
-                        parts.splice(i, 1);
-                    }
-                    else {
-                        i++;
+            this._len = 0;
+        };
+        var Sys$StringBuilder$append = function (text) {
+            this._parts[this._parts.length] = text;
+        };
+        var Sys$StringBuilder$appendLine = function (text) {
+            this._parts[this._parts.length] =
+                ((typeof (text) === 'undefined') || (text === null) || (text === '')) ?
+                    '\r\n' : text + '\r\n';
+        };
+        var Sys$StringBuilder$clear = function () {
+            this._parts = [];
+            this._value = {};
+            this._len = 0;
+        };
+        var Sys$StringBuilder$isEmpty = function () {
+            if (this._parts.length === 0)
+                return true;
+            return this.toString() === '';
+        };
+        var Sys$StringBuilder$toString = function (separator) {
+            separator = separator || '';
+            var parts = this._parts;
+            if (this._len !== parts.length) {
+                this._value = {};
+                this._len = parts.length;
+            }
+            var val = this._value;
+            if (typeof (val[separator]) === 'undefined') {
+                if (separator !== '') {
+                    for (var i = 0; i < parts.length;) {
+                        if ((typeof (parts[i]) === 'undefined') || (parts[i] === '') || (parts[i] === null)) {
+                            parts.splice(i, 1);
+                        }
+                        else {
+                            i++;
+                        }
                     }
                 }
+                val[separator] = this._parts.join(separator);
             }
-            val[separator] = this._parts.join(separator);
-        }
-        return val[separator];
+            return val[separator];
+        };
+        window["Sys"].StringBuilder.prototype = {
+            append: Sys$StringBuilder$append,
+            appendLine: Sys$StringBuilder$appendLine,
+            clear: Sys$StringBuilder$clear,
+            isEmpty: Sys$StringBuilder$isEmpty,
+            toString: Sys$StringBuilder$toString
+        };
     }
-    window["Sys"].StringBuilder.prototype = {
-        append: Sys$StringBuilder$append,
-        appendLine: Sys$StringBuilder$appendLine,
-        clear: Sys$StringBuilder$clear,
-        isEmpty: Sys$StringBuilder$isEmpty,
-        toString: Sys$StringBuilder$toString
-    };
-}
-if (typeof window["SP"] == 'undefined') {
-    window["SP"] = {};
-    function SP_ScriptUtility$isNullOrEmptyString(str) {
-        var strNull = null;
-        return str === strNull || typeof str === 'undefined' || !str.length;
-    }
-    ;
-    window["SP"].XmlWriter = function SP_XmlWriter($p0) {
-        this.$f_0 = [];
-        this.$1_0 = $p0;
-        this.$V_0 = true;
-    };
-    window["SP"].XmlWriter.create = function SP_XmlWriter$create(sb) {
-        return new window["SP"].XmlWriter(sb);
-    };
-    window["SP"].XmlWriter.prototype = {
-        $1_0: null,
-        $11_0: null,
-        $V_0: false,
-        $k_0: false,
-        writeStartElement: function SP_XmlWriter$writeStartElement(tagName) {
-            this.$1R_0();
-            this.$1A_0();
-            this.$f_0.push(tagName);
-            this.$11_0 = tagName;
-            this.$1_0.append('<');
-            this.$1_0.append(tagName);
-            this.$V_0 = false;
-            this.$k_0 = false;
-        },
-        writeElementString: function SP_XmlWriter$writeElementString(tagName, value) {
-            this.$1R_0();
-            this.$1A_0();
-            this.writeStartElement(tagName);
-            this.writeString(value);
-            this.writeEndElement();
-        },
-        writeEndElement: function SP_XmlWriter$writeEndElement() {
-            this.$1R_0();
-            if (SP_ScriptUtility$isNullOrEmptyString(this.$11_0)) {
-                throw "Invalid operation";
-            }
-            if (!this.$V_0) {
-                this.$1_0.append(' />');
-                this.$V_0 = true;
-            }
-            else {
-                this.$1_0.append('</');
-                this.$1_0.append(this.$11_0);
-                this.$1_0.append('>');
-            }
-            this.$f_0.pop();
-            if (this.$f_0.length > 0) {
-                this.$11_0 = this.$f_0[this.$f_0.length - 1];
-            }
-            else {
-                this.$11_0 = null;
-            }
-        },
-        $1A_0: function SP_XmlWriter$$1A_0() {
-            if (!this.$V_0) {
-                this.$1_0.append('>');
-                this.$V_0 = true;
-            }
-        },
-        writeAttributeString: function SP_XmlWriter$writeAttributeString(localName, value) {
-            if (this.$V_0) {
-                throw "Invalid operation";
-            }
-            this.$1_0.append(' ');
-            this.$1_0.append(localName);
-            this.$1_0.append('=\"');
-            this.$1T_0(value, true);
-            this.$1_0.append('\"');
-        },
-        writeStartAttribute: function SP_XmlWriter$writeStartAttribute(localName) {
-            if (!this.$V_0) {
-                throw "Invalid operation";
-            }
-            this.$k_0 = true;
-            this.$1_0.append(' ');
-            this.$1_0.append(localName);
-            this.$1_0.append('=\"');
-        },
-        writeEndAttribute: function SP_XmlWriter$writeEndAttribute() {
-            if (!this.$k_0) {
-                throw "Invalid operation";
-            }
-            this.$1_0.append('\"');
-            this.$k_0 = false;
-        },
-        writeString: function SP_XmlWriter$writeString(value) {
-            if (this.$k_0) {
-                this.$1T_0(value, true);
-                this.$1_0.append(value);
-            }
-            else {
+    if (typeof window["SP"] == 'undefined') {
+        window["SP"] = {};
+        var SP_ScriptUtility$isNullOrEmptyString = function (str) {
+            var strNull = null;
+            return str === strNull || typeof str === 'undefined' || !str.length;
+        };
+        window["SP"].XmlWriter = function SP_XmlWriter($p0) {
+            this.$f_0 = [];
+            this.$1_0 = $p0;
+            this.$V_0 = true;
+        };
+        window["SP"].XmlWriter.create = function SP_XmlWriter$create(sb) {
+            return new window["SP"].XmlWriter(sb);
+        };
+        window["SP"].XmlWriter.prototype = {
+            $1_0: null,
+            $11_0: null,
+            $V_0: false,
+            $k_0: false,
+            writeStartElement: function SP_XmlWriter$writeStartElement(tagName) {
+                this.$1R_0();
                 this.$1A_0();
-                this.$1T_0(value, false);
-            }
-        },
-        writeRaw: function SP_XmlWriter$writeRaw(xml) {
-            this.$1R_0();
-            this.$1A_0();
-            this.$1_0.append(xml);
-        },
-        $1R_0: function SP_XmlWriter$$1R_0() {
-            if (this.$k_0) {
-                throw "Invalid operation";
-            }
-        },
-        $1T_0: function SP_XmlWriter$$1T_0($p0, $p1) {
-            if (SP_ScriptUtility$isNullOrEmptyString($p0)) {
-                return;
-            }
-            for (var $v_0 = 0; $v_0 < $p0.length; $v_0++) {
-                var $v_1 = $p0.charCodeAt($v_0);
-                if ($v_1 === 62) {
-                    this.$1_0.append('&gt;');
+                this.$f_0.push(tagName);
+                this.$11_0 = tagName;
+                this.$1_0.append('<');
+                this.$1_0.append(tagName);
+                this.$V_0 = false;
+                this.$k_0 = false;
+            },
+            writeElementString: function SP_XmlWriter$writeElementString(tagName, value) {
+                this.$1R_0();
+                this.$1A_0();
+                this.writeStartElement(tagName);
+                this.writeString(value);
+                this.writeEndElement();
+            },
+            writeEndElement: function SP_XmlWriter$writeEndElement() {
+                this.$1R_0();
+                if (SP_ScriptUtility$isNullOrEmptyString(this.$11_0)) {
+                    throw "Invalid operation";
                 }
-                else if ($v_1 === 60) {
-                    this.$1_0.append('&lt;');
-                }
-                else if ($v_1 === 38) {
-                    this.$1_0.append('&amp;');
-                }
-                else if ($v_1 === 34 && $p1) {
-                    this.$1_0.append('&quot;');
-                }
-                else if ($v_1 === 39 && $p1) {
-                    this.$1_0.append('&apos;');
-                }
-                else if ($v_1 === 9 && $p1) {
-                    this.$1_0.append('&#09;');
-                }
-                else if ($v_1 === 10) {
-                    this.$1_0.append('&#10;');
-                }
-                else if ($v_1 === 13) {
-                    this.$1_0.append('&#13;');
+                if (!this.$V_0) {
+                    this.$1_0.append(' />');
+                    this.$V_0 = true;
                 }
                 else {
-                    this.$1_0.append(($p0.charAt($v_0)).toString());
+                    this.$1_0.append('</');
+                    this.$1_0.append(this.$11_0);
+                    this.$1_0.append('>');
                 }
+                this.$f_0.pop();
+                if (this.$f_0.length > 0) {
+                    this.$11_0 = this.$f_0[this.$f_0.length - 1];
+                }
+                else {
+                    this.$11_0 = null;
+                }
+            },
+            $1A_0: function SP_XmlWriter$$1A_0() {
+                if (!this.$V_0) {
+                    this.$1_0.append('>');
+                    this.$V_0 = true;
+                }
+            },
+            writeAttributeString: function SP_XmlWriter$writeAttributeString(localName, value) {
+                if (this.$V_0) {
+                    throw "Invalid operation";
+                }
+                this.$1_0.append(' ');
+                this.$1_0.append(localName);
+                this.$1_0.append('=\"');
+                this.$1T_0(value, true);
+                this.$1_0.append('\"');
+            },
+            writeStartAttribute: function SP_XmlWriter$writeStartAttribute(localName) {
+                if (!this.$V_0) {
+                    throw "Invalid operation";
+                }
+                this.$k_0 = true;
+                this.$1_0.append(' ');
+                this.$1_0.append(localName);
+                this.$1_0.append('=\"');
+            },
+            writeEndAttribute: function SP_XmlWriter$writeEndAttribute() {
+                if (!this.$k_0) {
+                    throw "Invalid operation";
+                }
+                this.$1_0.append('\"');
+                this.$k_0 = false;
+            },
+            writeString: function SP_XmlWriter$writeString(value) {
+                if (this.$k_0) {
+                    this.$1T_0(value, true);
+                    this.$1_0.append(value);
+                }
+                else {
+                    this.$1A_0();
+                    this.$1T_0(value, false);
+                }
+            },
+            writeRaw: function SP_XmlWriter$writeRaw(xml) {
+                this.$1R_0();
+                this.$1A_0();
+                this.$1_0.append(xml);
+            },
+            $1R_0: function SP_XmlWriter$$1R_0() {
+                if (this.$k_0) {
+                    throw "Invalid operation";
+                }
+            },
+            $1T_0: function SP_XmlWriter$$1T_0($p0, $p1) {
+                if (SP_ScriptUtility$isNullOrEmptyString($p0)) {
+                    return;
+                }
+                for (var $v_0 = 0; $v_0 < $p0.length; $v_0++) {
+                    var $v_1 = $p0.charCodeAt($v_0);
+                    if ($v_1 === 62) {
+                        this.$1_0.append('&gt;');
+                    }
+                    else if ($v_1 === 60) {
+                        this.$1_0.append('&lt;');
+                    }
+                    else if ($v_1 === 38) {
+                        this.$1_0.append('&amp;');
+                    }
+                    else if ($v_1 === 34 && $p1) {
+                        this.$1_0.append('&quot;');
+                    }
+                    else if ($v_1 === 39 && $p1) {
+                        this.$1_0.append('&apos;');
+                    }
+                    else if ($v_1 === 9 && $p1) {
+                        this.$1_0.append('&#09;');
+                    }
+                    else if ($v_1 === 10) {
+                        this.$1_0.append('&#10;');
+                    }
+                    else if ($v_1 === 13) {
+                        this.$1_0.append('&#13;');
+                    }
+                    else {
+                        this.$1_0.append(($p0.charAt($v_0)).toString());
+                    }
+                }
+            },
+            close: function SP_XmlWriter$close() {
             }
-        },
-        close: function SP_XmlWriter$close() {
-        }
-    };
-}
+        };
+    }
+})(typeof window != "undefined" ? window : global);
+module.exports = CamlBuilder;
