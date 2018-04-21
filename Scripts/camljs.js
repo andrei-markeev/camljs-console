@@ -1294,4 +1294,6 @@ var CamlBuilder = /** @class */ (function () {
         };
     }
 })(typeof window != "undefined" ? window : global);
-module.exports = CamlBuilder;
+
+if (typeof module != "undefined")
+    module.exports = CamlBuilder;
