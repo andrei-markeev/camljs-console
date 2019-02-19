@@ -1,3 +1,5 @@
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CamlBuilder = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function (global){
 "use strict";
 var CamlBuilder = /** @class */ (function () {
     function CamlBuilder() {
@@ -8,7 +10,8 @@ var CamlBuilder = /** @class */ (function () {
     };
     /** Generate <View> tag for SP.CamlQuery
         @param viewFields If omitted, default view fields are requested; otherwise, only values for the fields with the specified internal names are returned.
-                          Specifying view fields is a good practice, as it decreases traffic between server and client. */
+                          Specifying view fields is a good practice, as it decreases traffic between server and client.
+                          Additionally you can specify aggregated fields, e.g. { count: "<field name>" }, { sum: "<field name>" }, etc.. */
     CamlBuilder.prototype.View = function (viewFields) {
         return CamlBuilder.Internal.createView(viewFields);
     };
@@ -79,8 +82,21 @@ var CamlBuilder = /** @class */ (function () {
         ViewInternal.prototype.View = function (viewFields) {
             this.builder.WriteStart("View");
             this.builder.unclosedTags++;
-            if (viewFields && viewFields.length > 0)
-                this.CreateViewFields(viewFields);
+            if (viewFields) {
+                var fieldNames = [];
+                var aggregations = [];
+                for (var _i = 0, viewFields_1 = viewFields; _i < viewFields_1.length; _i++) {
+                    var viewField = viewFields_1[_i];
+                    if (typeof viewField === "string")
+                        fieldNames.push(viewField);
+                    else
+                        aggregations.push(viewField);
+                }
+                if (fieldNames.length > 0)
+                    this.CreateViewFields(fieldNames);
+                if (aggregations.length > 0)
+                    this.CreateAggregations(aggregations);
+            }
             this.joinsManager = new JoinsManager(this.builder, this);
             return this;
         };
@@ -88,6 +104,16 @@ var CamlBuilder = /** @class */ (function () {
             this.builder.WriteStart("ViewFields");
             for (var i = 0; i < viewFields.length; i++) {
                 this.builder.WriteFieldRef(viewFields[i]);
+            }
+            this.builder.WriteEnd();
+            return this;
+        };
+        ViewInternal.prototype.CreateAggregations = function (aggregations) {
+            this.builder.WriteStart("Aggregations", [{ Name: "Value", Value: "On" }]);
+            for (var i = 0; i < aggregations.length; i++) {
+                var type = Object.keys(aggregations[i])[0];
+                var name_1 = aggregations[i][type];
+                this.builder.WriteFieldRef(name_1, { Type: type.toUpperCase() });
             }
             this.builder.WriteEnd();
             return this;
@@ -112,11 +138,11 @@ var CamlBuilder = /** @class */ (function () {
             }
             return this;
         };
-        ViewInternal.prototype.InnerJoin = function (lookupFieldInternalName, alias) {
-            return this.joinsManager.Join(lookupFieldInternalName, alias, "INNER");
+        ViewInternal.prototype.InnerJoin = function (lookupFieldInternalName, alias, fromList) {
+            return this.joinsManager.Join(lookupFieldInternalName, alias, "INNER", fromList);
         };
-        ViewInternal.prototype.LeftJoin = function (lookupFieldInternalName, alias) {
-            return this.joinsManager.Join(lookupFieldInternalName, alias, "LEFT");
+        ViewInternal.prototype.LeftJoin = function (lookupFieldInternalName, alias, fromList) {
+            return this.joinsManager.Join(lookupFieldInternalName, alias, "LEFT", fromList);
         };
         /** Select projected field for using in the main Query body
             @param remoteFieldAlias By this alias, the field can be used in the main Query body. */
@@ -153,9 +179,10 @@ var CamlBuilder = /** @class */ (function () {
             return new FieldExpression(this.builder);
         };
         /** Adds GroupBy clause to the query.
-            @param collapse If true, only information about the groups is retrieved, otherwise items are also retrieved. */
-        QueryInternal.prototype.GroupBy = function (groupFieldName, collapse) {
-            this.builder.WriteStartGroupBy(groupFieldName, collapse);
+            @param collapse If true, only information about the groups is retrieved, otherwise items are also retrieved.
+            @param groupLimit Return only first N groups */
+        QueryInternal.prototype.GroupBy = function (groupFieldName, collapse, groupLimit) {
+            this.builder.WriteStartGroupBy(groupFieldName, collapse, groupLimit);
             return new GroupedQuery(this.builder);
         };
         /** Adds OrderBy clause to the query
@@ -272,9 +299,10 @@ var CamlBuilder = /** @class */ (function () {
             return new FieldExpression(this.builder);
         };
         /** Adds GroupBy clause to the query.
-            @param collapse If true, only information about the groups is retrieved, otherwise items are also retrieved. */
-        QueryToken.prototype.GroupBy = function (groupFieldName, collapse) {
-            this.builder.WriteStartGroupBy(groupFieldName, collapse);
+            @param collapse If true, only information about the groups is retrieved, otherwise items are also retrieved.
+            @param groupLimit Return only first N groups */
+        QueryToken.prototype.GroupBy = function (groupFieldName, collapse, groupLimit) {
+            this.builder.WriteStartGroupBy(groupFieldName, collapse, groupLimit);
             return new GroupedQuery(this.builder);
         };
         /** Adds OrderBy clause to the query
@@ -413,6 +441,10 @@ var CamlBuilder = /** @class */ (function () {
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is Text */
         FieldExpression.prototype.TextField = function (internalName) {
             return new FieldExpressionToken(this.builder, internalName, "Text");
+        };
+        /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is ContentTypeId */
+        FieldExpression.prototype.ContentTypeIdField = function (internalName) {
+            return new FieldExpressionToken(this.builder, internalName || "ContentTypeId", "ContentTypeId");
         };
         /** Specifies that a condition will be tested against the field with the specified internal name, and the type of this field is Choice */
         FieldExpression.prototype.ChoiceField = function (internalName) {
@@ -836,8 +868,10 @@ var CamlBuilder = /** @class */ (function () {
         function Builder() {
             this.tree = new Array();
             this.unclosedTags = 0;
+            this.sealed = false;
         }
         Builder.prototype.SetAttributeToLastElement = function (tagName, attributeName, attributeValue) {
+            this.ThrowIfSealed();
             for (var i = this.tree.length - 1; i >= 0; i--) {
                 if (this.tree[i].Name == tagName) {
                     this.tree[i].Attributes = this.tree[i].Attributes || [];
@@ -848,6 +882,7 @@ var CamlBuilder = /** @class */ (function () {
             throw new Error("CamlJs ERROR: can't find element '" + tagName + "' in the tree while setting attribute " + attributeName + " to '" + attributeValue + "'!");
         };
         Builder.prototype.WriteRowLimit = function (paged, limit) {
+            this.ThrowIfSealed();
             if (paged)
                 this.tree.push({ Element: "Start", Name: "RowLimit", Attributes: [{ Name: "Paged", Value: "TRUE" }] });
             else
@@ -856,18 +891,21 @@ var CamlBuilder = /** @class */ (function () {
             this.tree.push({ Element: "End" });
         };
         Builder.prototype.WriteStart = function (tagName, attributes) {
+            this.ThrowIfSealed();
             if (attributes)
                 this.tree.push({ Element: "Start", Name: tagName, Attributes: attributes });
             else
                 this.tree.push({ Element: "Start", Name: tagName });
         };
         Builder.prototype.WriteEnd = function (count) {
+            this.ThrowIfSealed();
             if (count > 0)
                 this.tree.push({ Element: "End", Count: count });
             else
                 this.tree.push({ Element: "End" });
         };
         Builder.prototype.WriteFieldRef = function (fieldInternalName, options) {
+            this.ThrowIfSealed();
             var fieldRef = { Element: 'FieldRef', Name: fieldInternalName };
             for (var name in options || {}) {
                 fieldRef[name] = options[name];
@@ -875,6 +913,7 @@ var CamlBuilder = /** @class */ (function () {
             this.tree.push(fieldRef);
         };
         Builder.prototype.WriteValueElement = function (valueType, value) {
+            this.ThrowIfSealed();
             if (valueType == "Date")
                 this.tree.push({ Element: "Value", ValueType: "DateTime", Value: value });
             else if (valueType == "DateTime")
@@ -883,6 +922,7 @@ var CamlBuilder = /** @class */ (function () {
                 this.tree.push({ Element: "Value", ValueType: valueType, Value: value });
         };
         Builder.prototype.WriteMembership = function (startIndex, type, groupId) {
+            this.ThrowIfSealed();
             var attributes = [{ Name: "Type", Value: type }];
             if (groupId) {
                 attributes.push({ Name: "ID", Value: groupId });
@@ -891,15 +931,18 @@ var CamlBuilder = /** @class */ (function () {
             this.WriteEnd();
         };
         Builder.prototype.WriteUnaryOperation = function (startIndex, operation) {
+            this.ThrowIfSealed();
             this.tree.splice(startIndex, 0, { Element: "Start", Name: operation });
             this.WriteEnd();
         };
         Builder.prototype.WriteBinaryOperation = function (startIndex, operation, valueType, value) {
+            this.ThrowIfSealed();
             this.tree.splice(startIndex, 0, { Element: "Start", Name: operation });
             this.WriteValueElement(valueType, value);
             this.WriteEnd();
         };
-        Builder.prototype.WriteStartGroupBy = function (groupFieldName, collapse) {
+        Builder.prototype.WriteStartGroupBy = function (groupFieldName, collapse, groupLimit) {
+            this.ThrowIfSealed();
             if (this.unclosedTags > 0) {
                 var tagsToClose = this.unclosedTags;
                 if (this.tree[0].Name == "Query")
@@ -910,14 +953,17 @@ var CamlBuilder = /** @class */ (function () {
                     this.tree.push({ Element: "End", Count: tagsToClose });
                 this.unclosedTags -= tagsToClose;
             }
+            var elem = { Element: "Start", Name: "GroupBy", Attributes: [] };
             if (collapse)
-                this.tree.push({ Element: "Start", Name: "GroupBy", Attributes: [{ Name: "Collapse", Value: "TRUE" }] });
-            else
-                this.tree.push({ Element: "Start", Name: "GroupBy" });
+                elem.Attributes.push({ Name: "Collapse", Value: "TRUE" });
+            if (groupLimit)
+                elem.Attributes.push({ Name: "GroupLimit", Value: "" + groupLimit });
+            this.tree.push(elem);
             this.tree.push({ Element: "FieldRef", Name: groupFieldName });
             this.WriteEnd();
         };
         Builder.prototype.WriteStartOrderBy = function (override, useIndexForOrderBy) {
+            this.ThrowIfSealed();
             if (this.unclosedTags > 0) {
                 var tagsToClose = this.unclosedTags;
                 if (this.tree[0].Name == "Query")
@@ -940,8 +986,9 @@ var CamlBuilder = /** @class */ (function () {
             this.unclosedTags++;
         };
         Builder.prototype.WriteConditions = function (builders, elementName) {
+            this.ThrowIfSealed();
             var pos = this.tree.length;
-            builders.reverse();
+            builders = builders.filter(function (b) { return b.tree.length > 0; }).reverse();
             for (var i = 0; i < builders.length; i++) {
                 var conditionBuilder = builders[i];
                 if (conditionBuilder.unclosedTags > 0)
@@ -952,6 +999,10 @@ var CamlBuilder = /** @class */ (function () {
                 }
                 Array.prototype.splice.apply(this.tree, [pos, 0].concat(conditionBuilder.tree));
             }
+        };
+        Builder.prototype.ThrowIfSealed = function () {
+            if (this.sealed)
+                throw new Error("CamlBuilder was already serialized, you cannot make modifications to it anymore. Please create a new CamlBuilder object for every query.");
         };
         Builder.prototype.Finalize = function () {
             var sb = new Sys.StringBuilder();
@@ -1011,7 +1062,7 @@ var CamlBuilder = /** @class */ (function () {
                 this.unclosedTags--;
                 writer.writeEndElement();
             }
-            this.tree = new Array();
+            this.sealed = true;
             writer.close();
             return sb.toString();
         };
@@ -1294,6 +1345,8 @@ var CamlBuilder = /** @class */ (function () {
         };
     }
 })(typeof window != "undefined" ? window : global);
+module.exports = CamlBuilder;
 
-if (typeof module != "undefined")
-    module.exports = CamlBuilder;
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}]},{},[1])(1)
+});
