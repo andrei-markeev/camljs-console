@@ -1,7 +1,7 @@
 {
 	"name": "CamlJS Console",
     "homepage_url": "https://github.com/andrei-markeev/camljs-console",
-	"version": "1.0.12",
+	"version": "1.0.13",
 	"description": "CamlJS Console with live preview.",
 	"icons": {
         "16": "AppIcon16.png",
