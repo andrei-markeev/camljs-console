@@ -371,13 +371,11 @@ var CamlBuilder = /** @class */ (function () {
                 case ModifyType.Replace:
                     return new FieldExpression(builder);
                 case ModifyType.AppendAnd:
-                    var pos = builder.tree.length;
                     builder.WriteStart("And");
                     builder.unclosedTags++;
                     builder.tree = builder.tree.concat(whereBuilder.tree);
                     return new FieldExpression(builder);
                 case ModifyType.AppendOr:
-                    var pos = builder.tree.length;
                     builder.WriteStart("Or");
                     builder.unclosedTags++;
                     builder.tree = builder.tree.concat(whereBuilder.tree);
@@ -388,7 +386,11 @@ var CamlBuilder = /** @class */ (function () {
         };
         RawQueryInternal.prototype.getXmlDocument = function (xml) {
             var xmlDoc;
-            if (window["DOMParser"]) {
+            if (typeof window === "undefined") {
+                var XMLDOM = require('xmldom').DOMParser;
+                xmlDoc = new XMLDOM().parseFromString(this.xml, "text/xml");
+            }
+            else if (window["DOMParser"]) {
                 var parser = new DOMParser();
                 xmlDoc = parser.parseFromString(this.xml, "text/xml");
             }
@@ -1012,9 +1014,9 @@ var CamlBuilder = /** @class */ (function () {
                     writer.writeStartElement("FieldRef");
                     writer.writeAttributeString("Name", this.tree[i].Name);
                     if (this.tree[i].LookupId)
-                        writer.writeAttributeString("LookupId", "True");
+                        writer.writeAttributeString("LookupId", "TRUE");
                     if (this.tree[i].Descending)
-                        writer.writeAttributeString("Ascending", "False");
+                        writer.writeAttributeString("Ascending", "FALSE");
                     for (var attr in this.tree[i]) {
                         if (attr == "Element" || attr == "Name" || attr == "LookupId" || attr == "Descending")
                             continue;
@@ -1036,7 +1038,7 @@ var CamlBuilder = /** @class */ (function () {
                 else if (this.tree[i].Element == "Value") {
                     writer.writeStartElement("Value");
                     if (this.tree[i].IncludeTimeValue === true)
-                        writer.writeAttributeString("IncludeTimeValue", "True");
+                        writer.writeAttributeString("IncludeTimeValue", "TRUE");
                     writer.writeAttributeString("Type", this.tree[i].ValueType);
                     var value = this.tree[i].Value.toString();
                     if (value.slice(0, 1) == "{" && value.slice(-1) == "}")
@@ -1348,5 +1350,5 @@ var CamlBuilder = /** @class */ (function () {
 module.exports = CamlBuilder;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[1])(1)
+},{"xmldom":"xmldom"}]},{},[1])(1)
 });
