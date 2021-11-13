@@ -2,10 +2,12 @@ declare class CamlBuilder {
     constructor();
     /** Generate CAML Query, starting from <Where> tag */
     Where(): CamlBuilder.IFieldExpression;
+    /** Generate CAML Query, starting from <Query> tag */
+    Query(): CamlBuilder.IQuery;
     /** Generate <View> tag for SP.CamlQuery
         @param viewFields If omitted, default view fields are requested; otherwise, only values for the fields with the specified internal names are returned.
-                          Specifying view fields is a good practice, as it decreases traffic between server and client.
-                          Additionally you can specify aggregated fields, e.g. { count: "<field name>" }, { sum: "<field name>" }, etc.. */
+                        Specifying view fields is a good practice, as it decreases traffic between server and client.
+                        Additionally you can specify aggregated fields, e.g. { count: "<field name>" }, { sum: "<field name>" }, etc.. */
     View(viewFields?: CamlBuilder.ViewField[]): CamlBuilder.IView;
     /** Generate <ViewFields> tag for SPServices */
     ViewFields(viewFields: string[]): CamlBuilder.IFinalizableToString;
@@ -85,7 +87,7 @@ declare module CamlBuilder {
     enum ViewScope {
         Recursive = 0,
         RecursiveAll = 1,
-        FilesOnly = 2,
+        FilesOnly = 2
     }
     interface IQuery extends IGroupable {
         Where(): IFieldExpression;
@@ -128,9 +130,9 @@ declare module CamlBuilder {
     }
     interface ISortedQuery extends IFinalizable {
         /** Specifies next order field (ascending) */
-        ThenBy(fieldInternalName: string): any;
+        ThenBy(fieldInternalName: string): ISortedQuery;
         /** Specifies next order field (descending) */
-        ThenByDesc(fieldInternalName: string): any;
+        ThenByDesc(fieldInternalName: string): ISortedQuery;
     }
     interface IFieldExpression {
         /** Adds And clauses to the query. Use for creating bracket-expressions in conjuction with CamlBuilder.Expression(). */
@@ -183,7 +185,7 @@ declare module CamlBuilder {
             @param eventDateField Internal name of "Start Time" field (default: "EventDate" - all OOTB Calendar lists use this name)
             @param endDateField Internal name of "End Time" field (default: "EndDate" - all OOTB Calendar lists use this name)
             @param recurrenceIDField Internal name of "Recurrence ID" field (default: "RecurrenceID" - all OOTB Calendar lists use this name)
-         */
+        */
         DateRangesOverlap(overlapType: DateRangesOverlapType, calendarDate: string, eventDateField?: string, endDateField?: string, recurrenceIDField?: string): IExpression;
     }
     interface IBooleanFieldExpression {
@@ -278,8 +280,6 @@ declare module CamlBuilder {
         In(arrayOfValues: string[]): IExpression;
     }
     interface IUserFieldExpression {
-        /** DEPRECATED. Please use IsIn* methods instead. This property will be removed in next release(!!) */
-        Membership: IMembership;
         /** Checks whether the value of the User field is equal to id of the current user */
         EqualToCurrentUser(): IExpression;
         /** Checks whether the group specified by the value of the field includes the current user. */
@@ -296,24 +296,6 @@ declare module CamlBuilder {
         Id(): INumberFieldExpression;
         /** Specifies that lookup target field value will be used for further comparisons. */
         ValueAsText(): ITextFieldExpression;
-    }
-    /** DEPRECATED!! Please use UserField(...).IsIn* methods instead. This interface will be removed in the next release */
-    interface IMembership {
-        /** DEPRECATED. Please use UserField(...).IsInCurrentUserGroups() instead */
-        CurrentUserGroups(): IExpression;
-        /** DEPRECATED. Please use UserField(...).IsInSPGroup() instead */
-        SPGroup(groupId: number): IExpression;
-        /** DEPRECATED. Please use UserField(...).IsInSPWeb* methods instead */
-        SPWeb: IMembershipSPWeb;
-    }
-    /** DEPRECATED!! Please use UserField(...).IsInSPWeb* methods instead. This interface will be removed in the next release */
-    interface IMembershipSPWeb {
-        /** DEPRECATED. Please use UserField(...).IsInSPWebAllUsers() instead */
-        AllUsers(): IExpression;
-        /** DEPRECATED. Please use UserField(...).IsInSPWebUsers() instead */
-        Users(): IExpression;
-        /** DEPRECATED. Please use UserField(...).IsInSPWebGroups() instead */
-        Groups(): IExpression;
     }
     interface ILookupFieldExpression {
         /** Specifies that lookup id value will be used. */
@@ -393,11 +375,12 @@ declare module CamlBuilder {
             Caution: usually also returns few days from previous and next months */
         Month = 3,
         /** Returns events for one year, specified by CalendarDate in QueryOptions */
-        Year = 4,
+        Year = 4
     }
     class Internal {
         static createView(viewFields?: ViewField[]): IView;
         static createViewFields(viewFields: string[]): IFinalizableToString;
+        static createQuery(): IQuery;
         static createWhere(): IFieldExpression;
         static createExpression(): IFieldExpression;
         static createRawQuery(xml: string): IRawQuery;
@@ -412,28 +395,48 @@ declare module CamlBuilder {
         static Now: string;
         /** Dynamic value that represents a property of the current list */
         static ListProperty: {
+            /** Date and time the list was created. */
             Created: string;
+            /** Server-relative URL of the default list view. */
             DefaultViewUrl: string;
+            /** Description of the list. */
             Description: string;
+            /** Determines if RSS syndication is enabled for the list */
             EnableSyndication: string;
+            /** Number of items in the list */
             ItemCount: string;
+            /** Title linked to the list */
             LinkTitle: string;
+            /** For a document library that uses version control with major versions only, maximum number of major versions allowed for items. */
             MajorVersionLimit: string;
+            /** For a document library that uses version control with both major and minor versions, maximum number of major versions allowed for items. */
             MajorWithMinorVersionsLimit: string;
+            /** Site-relative URL for the list. */
             RelativeFolderPath: string;
+            /** Title of the list. */
             Title: string;
+            /** View selector with links to views for the list. */
             ViewSelector: string;
         };
         /** Dynamic value that represents a property of the current SPWeb */
         static ProjectProperty: {
+            /** Category of the current post item. */
             BlogCategoryTitle: string;
+            /** Title of the current post item. */
             BlogPostTitle: string;
+            /** Represents a description for the current website. */
             Description: string;
+            /** Represents a value that determines whether the recycle bin is enabled for the current website. */
             RecycleBinEnabled: string;
+            /** User name of the owner for the current site collection. */
             SiteOwnerName: string;
+            /** Full URL of the current site collection. */
             SiteUrl: string;
+            /** Title of the current Web site. */
             Title: string;
+            /** Full URL of the current Web site. */
             Url: string;
         };
     }
 }
+export = CamlBuilder;
