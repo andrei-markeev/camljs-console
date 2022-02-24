@@ -439,4 +439,3 @@ declare module CamlBuilder {
         };
     }
 }
-export = CamlBuilder;
